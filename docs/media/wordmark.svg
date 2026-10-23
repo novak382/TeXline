@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="260" viewBox="0 0 1120 260" role="img" aria-label="TeXline — A quieter workspace for LaTeX.">
+<rect width="1120" height="260" rx="12" fill="#f4f8fa"/>
+<path d="M490 55h140" stroke="#bacdd6" stroke-width="2"/>
+<text x="560" y="145" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="83" fill="#263f4b" letter-spacing="-3">TeXline</text>
+<text x="560" y="201" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="25" fill="#536b77" letter-spacing=".4">A quieter workspace for LaTeX.</text>
+</svg>

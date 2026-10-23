@@ -2,13 +2,13 @@
 
 ## Requirements / 环境
 
-- Windows 10/11 x64; this preview has not certified Windows on ARM
+- Windows 10/11 x64; this release has not certified Windows on ARM
 - A writable per-user installation directory
 - TeX Live or MiKTeX installed separately, with the chosen engine and packages
 
 The package contains the editor, PDF support data, fonts, local introduction,
 examples and notices. It does not bundle TeX, an AI service or an updater.
-The unsigned preview may trigger Windows reputation warnings. Check the
+The unsigned package may trigger Windows reputation warnings. Check the
 supplied SHA256SUMS and your distribution channel before deciding to run it;
 do not disable system protection globally.
 
@@ -27,7 +27,7 @@ back them up before transferring or removing the folder. Setup never ships
 another user's settings. An upgrade keeps them and takes a local copy of the
 previous executable under `rollback` before replacement. A rollback executable
 alone is not a full rollback of resources: keep the prior portable package when
-you need to revert a whole preview. Your manuscripts are never installation
+you need to revert a whole release. Your manuscripts are never installation
 files and should be stored in your own writing folder.
 
 ## First compilation

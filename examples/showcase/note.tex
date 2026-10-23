@@ -1,0 +1,33 @@
+\documentclass[11pt,a5paper]{article}
+\usepackage[margin=16mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,lmodern}
+\newtheorem{theorem}{Theorem}
+\title{A note on rank-one structure}
+\author{}\date{}
+\begin{document}
+\begin{center}{\Large\bfseries A note on rank-one structure}\end{center}
+\section{One direction}
+A rank-one matrix has a simple geometry.
+For $A=uv^{\mathsf T}$, every output lies along $u$;
+only the component of the input along $v$ matters.
+
+\begin{theorem}\label{thm:rank-one}
+For $u,v\in\mathbb R^d$, the operator norm satisfies
+\[\|uv^{\mathsf T}\|_{\mathrm{op}}=\|u\|_2\,\|v\|_2.\]
+\end{theorem}
+\begin{proof}
+For every unit vector $x$, Cauchy--Schwarz gives
+\[\|Ax\|_2=\|u\|_2\,|v^{\mathsf T}x|
+  \leq\|u\|_2\,\|v\|_2.\]
+When $v\ne0$, take $x=v/\|v\|_2$ to attain equality.
+The case $v=0$ is immediate.
+\end{proof}
+
+\section{Beyond rank one}
+Theorem~\ref{thm:rank-one} identifies the scale of a single component.
+For a sum of components, the triangle inequality yields
+\[\Bigl\|\sum_{j=1}^r u_jv_j^{\mathsf T}\Bigr\|_{\mathrm{op}}
+ \leq\sum_{j=1}^r\|u_j\|_2\,\|v_j\|_2.\]
+No orthogonality is assumed. Sharper conclusions
+depend on how the directions interact.
+\end{document}

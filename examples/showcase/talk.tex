@@ -1,0 +1,29 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage{amsmath,amssymb,lmodern}
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{structure}{fg=black!80}
+\setbeamercolor{frametitle}{fg=black!80}
+\begin{document}
+\begin{frame}{One direction}
+\large
+For a rank-one matrix $A=uv^{\mathsf T}$,
+\[\|A\|_{\mathrm{op}}=\|u\|_2\,\|v\|_2.\]
+\medskip
+The geometry tells us where to look for equality.
+\end{frame}
+\begin{frame}{A proof in three steps}
+\large
+\begin{enumerate}
+\item Write $Ax=u(v^{\mathsf T}x)$.
+\item<2-> Bound the scalar product by Cauchy--Schwarz.
+\item<3-> Take $x=v/\|v\|_2$ when $v\ne0$.
+\end{enumerate}
+\end{frame}
+\begin{frame}{Beyond one component}
+\large
+For $A=\sum_{j=1}^r u_jv_j^{\mathsf T}$,
+\[\|A\|_{\mathrm{op}}\leq\sum_{j=1}^r\|u_j\|_2\,\|v_j\|_2.\]
+\medskip
+What changes when the directions are orthogonal?
+\end{frame}
+\end{document}
