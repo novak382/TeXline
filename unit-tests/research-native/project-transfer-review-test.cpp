@@ -1,0 +1,30 @@
+#include "ActualAuthoringRecording.h"
+#include "ResearchProjectOperations.cpp"
+using namespace Research;
+static void confirm(QWidget *owner,bool accept,bool *seen){auto *timer=new QTimer(owner);QObject::connect(timer,&QTimer::timeout,timer,[=]{auto *d=owner->findChild<QDialog*>("researchWorkspaceConfirmDialog");if(d&&d->isVisible()){timer->stop();timer->deleteLater();*seen=true;if(accept)d->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();else key(d,Qt::Key_Escape);}});timer->start(20);}
+int main(int argc,char **argv){const auto report=argument(1);argc=1;TWApp app(argc,argv);app.setQuitOnLastWindowClosed(false);QTimer::singleShot(60,&app,[&]{
+ const auto folder=QFileInfo(report).absolutePath(),paper=folder+"/paper",main=paper+"/main.tex",a=paper+"/甲.tex",b=paper+"/second.tex",dest=paper+"/sections";
+ QJsonArray checks;int failures=0;auto check=[&](const QString &name,bool pass){checks.append(QJsonObject{{"name",name},{"passed",pass}});failures+=!pass;put(report,QJsonDocument(QJsonObject{{"checks",checks},{"failures",failures}}).toJson());};
+ const QByteArray source="\\documentclass{article}\n\\begin{document}\n\\input{甲}\n\\input{second}\n\\end{document}\n";put(main,source);put(a,"中文 first\n");put(b,"English second\n");QDir().mkpath(dest);
+ Tw::Settings().setValue("openPDFwithTeX",false);auto *w=new TeXDocumentWindow(main);w->resize(1040,760);w->show();settle(150);w->findChild<QAction*>("researchProjectFilesAction")->trigger();
+ auto *d=w->findChild<QDialog*>("researchProjectFiles");auto *tree=d->findChild<QTreeView*>("researchProjectFileTree");auto *model=qobject_cast<QFileSystemModel*>(tree->model());auto *ops=d->findChild<QToolButton*>("researchProjectOperations");
+ auto *store=static_cast<ProjectOperationHistory*>(w->findChild<QObject*>("researchProjectOperationHistory"));std::unique_ptr<QMimeData> clipboard;
+ store->readClipboard=[&]{return clipboard.get();};store->writeClipboard=[&](QMimeData *mime){clipboard.reset(mime);};
+ auto trigger=[&](const char *zh,const char *en){for(auto *action:d->findChildren<QAction*>())if(action->text()==words(zh,en)){action->trigger();return true;}return false;};
+ check("project tree loads selected files",waitFor([&]{return model->index(a).isValid()&&model->index(b).isValid()&&model->index(dest).isValid();}));
+ auto select=[&](const QStringList &paths){tree->selectionModel()->clearSelection();for(const auto &path:paths)tree->selectionModel()->select(model->index(path),QItemSelectionModel::Select|QItemSelectionModel::Rows);};
+ select({a,b});check("multi-select preserves both rows",tree->selectionModel()->selectedRows().size()==2);trigger("剪切","Cut");check("cut uses private file URLs without writing disk",clipboard&&clipboard->urls().size()==2&&QFileInfo::exists(a)&&QFileInfo::exists(b));tree->setCurrentIndex(model->index(dest));
+ bool seen=false;confirm(d,false,&seen);trigger("粘贴","Paste");check("paste Esc cancels entire batch",waitFor([&]{return seen&&ops->isEnabled();})&&QFileInfo::exists(a)&&QFileInfo::exists(b)&&!QFileInfo::exists(dest+"/甲.tex"));
+ seen=false;confirm(d,true,&seen);trigger("粘贴","Paste");check("paste moves both files in one operation",waitFor([&]{return seen&&ops->isEnabled();})&&!QFileInfo::exists(a)&&!QFileInfo::exists(b)&&bytes(dest+"/甲.tex")=="中文 first\n"&&bytes(dest+"/second.tex")=="English second\n");
+ check("batch move updates manuscript paths",bytes(main).contains("\\input{sections/甲}")&&bytes(main).contains("\\input{sections/second}"));
+ trigger("撤销上次文件操作","Undo last file operation");check("one undo restores batch and references",QFileInfo::exists(a)&&QFileInfo::exists(b)&&bytes(main)==source);
+ seen=false;confirm(d,true,&seen);trigger("重做文件操作","Redo file operation");check("redo restores whole batch",seen&&QFileInfo::exists(dest+"/甲.tex")&&!QFileInfo::exists(a));trigger("撤销上次文件操作","Undo last file operation");
+ waitFor([&]{return model->index(a).isValid()&&model->index(b).isValid();});select({a,b});seen=false;confirm(d,true,&seen);trigger("删除所选项目…","Delete selected items…");check("multi-delete is a single transaction",waitFor([&]{return seen&&ops->isEnabled();})&&!QFileInfo::exists(a)&&!QFileInfo::exists(b));trigger("撤销上次文件操作","Undo last file operation");check("delete undo restores exact text",bytes(a)=="中文 first\n"&&bytes(b)=="English second\n");
+ const auto external=folder+"/external.tex";put(external,"Imported independent source\n");QMimeData dropped;dropped.setUrls({QUrl::fromLocalFile(external)});tree->scrollTo(model->index(dest));settle();const auto point=tree->visualRect(model->index(dest)).center();
+ auto drop=[&]{QDragEnterEvent enter(point,Qt::CopyAction,&dropped,Qt::LeftButton,Qt::NoModifier);QApplication::sendEvent(tree->viewport(),&enter);QDropEvent event(QPointF(point),Qt::CopyAction,&dropped,Qt::LeftButton,Qt::NoModifier);QApplication::sendEvent(tree->viewport(),&event);return event.isAccepted()&&event.dropAction()==Qt::CopyAction;};
+ seen=false;confirm(d,false,&seen);check("external drag is accepted as a copy",drop());check("drag preview Esc leaves source and project untouched",waitFor([&]{return seen&&ops->isEnabled();})&&QFileInfo::exists(external)&&!QFileInfo::exists(dest+"/external.tex"));
+ seen=false;confirm(d,true,&seen);drop();check("confirmed external drag imports its file",waitFor([&]{return seen&&ops->isEnabled();})&&bytes(dest+"/external.tex")==bytes(external));trigger("撤销上次文件操作","Undo last file operation");check("external import undo preserves original",!QFileInfo::exists(dest+"/external.tex")&&bytes(external)=="Imported independent source\n");
+ d->grab().save(folder+"/project-batch.png");key(d,Qt::Key_Escape);settle();check("project Esc returns writing focus",w->editor()->hasFocus());
+ store->readClipboard=[]()->const QMimeData*{return nullptr;};store->writeClipboard=[](QMimeData *mime){delete mime;};
+ for(auto *window:TeXDocumentWindow::documentList())window->textDoc()->setModified(false);for(auto *window:TeXDocumentWindow::documentList())window->close();settle();app.exit(failures?1:0);
+ });return app.exec();}

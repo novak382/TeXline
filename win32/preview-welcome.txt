@@ -1,0 +1,23 @@
+TeXline — research writing with ordinary LaTeX files
+
+TeXline v1.0.0 installs the Windows x64 editor, PDF support data, local introduction,
+examples and license notices. Install TeX Live or MiKTeX separately to compile.
+
+The installation is for your Windows account. Choose a writable folder. No
+shortcuts or default file associations are created. Start TeXline.exe from the
+installation folder and follow docs/FIRST-SESSION.md with the included examples.
+
+Close your own TeXline session before upgrading. Your settings and recovery data
+are kept beside the application; uninstall preserves user-created files.
+
+This is an unsigned offline build. Physical IME, mouse drag/drop and
+multi-monitor acceptance remain open. No external researcher trial has completed.
+
+TeXline 科研写作 v1.0.0
+
+安装内容包括编辑器、PDF 支持、使用引导、示例及许可。编译需要另行安装 TeX Live
+或 MiKTeX。请选择可写目录；本次不创建快捷方式，不修改默认文件关联。
+
+安装后从目录打开 TeXline.exe，按 docs/FIRST-SESSION.md 完成首次写作。
+升级前请自行关闭程序；用户设置、恢复资料及自行创建的文件会保留。
+真实输入法、鼠标拖放和双屏仍待验收，外部真人试用尚未开展。

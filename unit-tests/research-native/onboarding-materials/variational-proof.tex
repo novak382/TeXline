@@ -1,0 +1,14 @@
+\section{Variational bound}
+\begin{claim}\label{thm:bound}
+The leading singular value satisfies
+\[|s_1(X)-\theta|\leq\|E\|_{\mathrm{op}}.\]
+\end{claim}
+\begin{proof}
+Apply the triangle inequality to $\|X\|_{\mathrm{op}}$.
+For the lower bound, use $s_1(X)\geq|u^*Xv|$ and
+$|\theta+u^*Ev|\geq\theta-\|E\|_{\mathrm{op}}$.
+Combining the two inequalities proves the claim.
+\end{proof}
+\section{Interpretation}
+Noise controls the error scale.
+This deterministic step can be reused under different noise models.

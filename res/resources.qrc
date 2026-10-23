@@ -1,0 +1,175 @@
+<RCC>
+	<qresource>
+		<file>icons/tango-texworks/index.theme</file>
+		<file>icons/tango-texworks/actions/32x32/document-new.png</file>
+		<file>icons/tango-texworks/actions/32x32/document-open.png</file>
+		<file>icons/tango-texworks/actions/32x32/document-save.png</file>
+		<file>icons/tango-texworks/actions/32x32/edit-copy.png</file>
+		<file>icons/tango-texworks/actions/32x32/edit-cut.png</file>
+		<file>icons/tango-texworks/actions/32x32/edit-find-replace.png</file>
+		<file>icons/tango-texworks/actions/32x32/edit-find.png</file>
+		<file>icons/tango-texworks/actions/32x32/edit-paste.png</file>
+		<file>icons/tango-texworks/actions/32x32/edit-redo.png</file>
+		<file>icons/tango-texworks/actions/32x32/edit-undo.png</file>
+		<file>icons/tango-texworks/actions/32x32/format-indent-less.png</file>
+		<file>icons/tango-texworks/actions/32x32/format-indent-more.png</file>
+		<file>icons/tango-texworks/actions/32x32/go-down.png</file>
+		<file>icons/tango-texworks/actions/32x32/go-first.png</file>
+		<file>icons/tango-texworks/actions/32x32/go-jump.png</file>
+		<file>icons/tango-texworks/actions/32x32/go-last.png</file>
+		<file>icons/tango-texworks/actions/32x32/go-next.png</file>
+		<file>icons/tango-texworks/actions/32x32/go-previous.png</file>
+		<file>icons/tango-texworks/actions/32x32/go-up.png</file>
+		<file>icons/tango-texworks/actions/32x32/list-add.png</file>
+		<file>icons/tango-texworks/actions/32x32/list-remove.png</file>
+		<file>icons/tango-texworks/actions/32x32/process-start.png</file>
+		<file>icons/tango-texworks/actions/32x32/process-stop.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/document-new.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/document-open.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/document-save.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/edit-copy.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/edit-cut.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/edit-find-replace.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/edit-find.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/edit-paste.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/edit-redo.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/edit-undo.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/format-indent-less.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/format-indent-more.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/go-down.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/go-first.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/go-jump.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/go-last.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/go-next.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/go-previous.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/go-up.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/list-add.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/list-remove.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/process-start.png</file>
+		<file>icons/tango-texworks/actions/32x32@2/process-stop.png</file>
+		<file>icons/tango-texworks/categories/32x32/preferences-system.png</file>
+		<file>icons/tango-texworks/categories/32x32@2/preferences-system.png</file>
+	<file>research/defaults.ini</file>
+<file>research/icons/chevron.svg</file>
+<file>research/icons/chevron-up.svg</file>
+<file>research/icons/chevron-left.svg</file>
+<file>research/icons/chevron-right.svg</file>
+<file>research/icons/more.svg</file>
+<file>research/icons/slide-add.svg</file>
+<file>research/icons/grid.svg</file>
+<file>research/icons/settings.svg</file>
+<file>research/icons/notes.svg</file>
+<file>research/icons/export.svg</file>
+<file>research/icons/outline.svg</file>
+<file>research/icons/back.svg</file>
+<file>research/icons/close.svg</file>
+<file>research/icons/minimize.svg</file>
+<file>research/icons/maximize.svg</file>
+<file>research/icons/restore.svg</file>
+<file>research/icons/codicons/chrome-minimize.svg</file>
+<file>research/icons/codicons/chrome-maximize.svg</file>
+<file>research/icons/codicons/chrome-restore.svg</file>
+<file>research/icons/codicons/chrome-close.svg</file>
+<file>research/icons/codicons/LICENSE</file>
+<file>research/icons/codicons/NOTICE.txt</file>
+<file>research/icons/codicons/add.svg</file>
+<file>research/icons/codicons/arrow-down.svg</file>
+<file>research/icons/codicons/arrow-left.svg</file>
+<file>research/icons/codicons/arrow-right.svg</file>
+<file>research/icons/codicons/arrow-up.svg</file>
+<file>research/icons/codicons/chevron-down.svg</file>
+<file>research/icons/codicons/chevron-left.svg</file>
+<file>research/icons/codicons/chevron-right.svg</file>
+<file>research/icons/codicons/chevron-up.svg</file>
+<file>research/icons/codicons/close.svg</file>
+<file>research/icons/codicons/cloud.svg</file>
+<file>research/icons/codicons/check.svg</file>
+<file>research/icons/codicons/filter.svg</file>
+<file>research/icons/codicons/copy.svg</file>
+<file>research/icons/codicons/debug-stop.svg</file>
+<file>research/icons/codicons/discard.svg</file>
+<file>research/icons/codicons/ellipsis.svg</file>
+<file>research/icons/codicons/export.svg</file>
+<file>research/icons/codicons/folder-opened.svg</file>
+<file>research/icons/codicons/layout.svg</file>
+<file>research/icons/codicons/list-tree.svg</file>
+<file>research/icons/codicons/lock.svg</file>
+<file>research/icons/codicons/new-file.svg</file>
+<file>research/icons/codicons/note.svg</file>
+<file>research/icons/codicons/play.svg</file>
+<file>research/icons/codicons/redo.svg</file>
+<file>research/icons/codicons/remove.svg</file>
+<file>research/icons/codicons/replace.svg</file>
+<file>research/icons/codicons/save.svg</file>
+<file>research/icons/codicons/search.svg</file>
+<file>research/icons/codicons/settings-gear.svg</file>
+<file>research/icons/codicons/whole-word.svg</file>
+<file>research/icons/codicons/warning.svg</file>
+<file>research/icons/codicons/zoom-in.svg</file>
+<file>research/icons/codicons/zoom-out.svg</file>
+<file alias="icons/texline-codicons/index.theme">research/icons/codicons/index.theme</file>
+<file alias="icons/texline-codicons/actions/scalable/document-new.svg">research/icons/codicons/new-file.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/document-open.svg">research/icons/codicons/folder-opened.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/document-save.svg">research/icons/codicons/save.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/edit-copy.svg">research/icons/codicons/copy.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/edit-find-replace.svg">research/icons/codicons/replace.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/edit-find.svg">research/icons/codicons/search.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/edit-redo.svg">research/icons/codicons/redo.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/edit-undo.svg">research/icons/codicons/discard.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/go-down.svg">research/icons/codicons/arrow-down.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/go-jump.svg">research/icons/codicons/arrow-right.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/go-next.svg">research/icons/codicons/chevron-right.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/go-previous.svg">research/icons/codicons/chevron-left.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/go-up.svg">research/icons/codicons/arrow-up.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/list-add.svg">research/icons/codicons/add.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/list-remove.svg">research/icons/codicons/remove.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/process-start.svg">research/icons/codicons/play.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/process-stop.svg">research/icons/codicons/debug-stop.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/preferences-system.svg">research/icons/codicons/settings-gear.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/zoom-in.svg">research/icons/codicons/zoom-in.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/zoom-out.svg">research/icons/codicons/zoom-out.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/tool-magnifier.svg">research/icons/codicons/search.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/tool-select-text.svg">research/icons/codicons/whole-word.svg</file>
+<file alias="icons/texline-codicons/actions/scalable/status-locked.svg">research/icons/codicons/lock.svg</file>
+<file>research/icons/codicons/manifest.json</file>
+<file>research/icons/find.svg</file>
+<file>research/icons/fit-page.svg</file>
+<file>research/icons/fit-width.svg</file>
+<file>research/icons/fit-content.svg</file>
+<file>research/icons/preview-expand.svg</file>
+<file>research/icons/preview-restore.svg</file>
+<file>research/icons/focus-play.svg</file>
+<file>research/icons/compile-sync.svg</file>
+<file>research/icons/focus-stop.svg</file>
+<file>research/icons/focus-jump.svg</file>
+<file>research/JetBrainsMonoNL-Bold.ttf</file>
+<file>research/JetBrainsMonoNL-BoldItalic.ttf</file>
+<file>research/JetBrainsMonoNL-Italic.ttf</file>
+<file>research/JetBrainsMonoNL-Regular.ttf</file>
+<file>research/theme.qss</file>
+<file>research/ui-en.json</file>
+<file>research/ui-zh_TW.json</file>
+<file>research/template-previews/letter.png</file>
+<file>research/template-previews/speaker_introduction-ornate-2min.en.png</file>
+<file>research/template-previews/minimal-seminar.png</file>
+<file>research/template-previews/minimal-research.png</file>
+<file>research/template-previews/memoir.png</file>
+<file>research/template-previews/manifest.json</file>
+<file>research/template-previews/classic-blank.png</file>
+<file>research/template-previews/KOMA-letter.png</file>
+<file>research/template-previews/generic-ornate-15min-45min.en.png</file>
+<file>research/template-previews/conference-ornate-20min.en.png</file>
+<file>research/template-previews/article.png</file>
+<file>research/template-previews/article-fontspec.png</file>
+<file>research/onboarding/content.json</file>
+<file>research/onboarding/media/slides.png</file>
+<file>research/onboarding/style.qss</file>
+</qresource>
+	<qresource prefix="/images">
+		<file>images/TeXworks.png</file>
+		<file>images/TeXworks-128.png</file>
+		<file>images/TeXworks-doc.png</file>
+		<file>images/TeXworks-doc-128.png</file>
+		<file>images/TeXworks-doc-48.png</file>
+	</qresource>
+</RCC>

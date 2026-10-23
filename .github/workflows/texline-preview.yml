@@ -1,0 +1,55 @@
+name: TeXline x64 preview (manual, no publication)
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_url:
+        description: URL of the reviewed RebuildKit (no embedded credentials)
+        required: true
+      sdk_sha256:
+        description: Expected SHA-256 of that exact archive
+        required: true
+      sdk_update_url:
+        description: URL of the reviewed 1.0.0 SDK Update
+        required: true
+      sdk_update_sha256:
+        description: Expected SHA-256 of that exact update
+        required: true
+permissions:
+  contents: read
+jobs:
+  application:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build python3 xz-utils build-essential libgl1 libegl1 libxcb1 libxkbcommon0 libdbus-1-3
+      - name: Verify and extract reviewed SDK
+        env:
+          SDK_URL: ${{ inputs.sdk_url }}
+          SDK_SHA256: ${{ inputs.sdk_sha256 }}
+          SDK_UPDATE_URL: ${{ inputs.sdk_update_url }}
+          SDK_UPDATE_SHA256: ${{ inputs.sdk_update_sha256 }}
+        run: |
+          python3 -c 'import os,re; assert re.fullmatch("[0-9a-fA-F]{64}",os.environ["SDK_SHA256"])'
+          curl --fail --location --proto '=https' "$SDK_URL" -o sdk.tar.xz
+          echo "$SDK_SHA256  sdk.tar.xz" | sha256sum --check
+          mkdir sdk
+          tar -xJf sdk.tar.xz -C sdk
+          python3 -c 'import os,re; assert re.fullmatch("[0-9a-fA-F]{64}",os.environ["SDK_UPDATE_SHA256"])'
+          curl --fail --location --proto '=https' "$SDK_UPDATE_URL" -o sdk-update.tar.xz
+          echo "$SDK_UPDATE_SHA256  sdk-update.tar.xz" | sha256sum --check
+          tar -xJf sdk-update.tar.xz -C sdk
+          python3 tools/relocate-sdk.py "$PWD/sdk"
+      - name: Export reviewed source and rebuild
+        run: |
+          python3 tools/release.py source --output source.zip
+          mkdir exported
+          python3 -m zipfile -e source.zip exported
+          python3 exported/tools/build-preview.py --mxe "$PWD/sdk" --build "$PWD/build" --output "$PWD/candidate"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TeXline-x64-candidate
+          path: |
+            candidate/candidate.exe
+            candidate/application-rebuild.json
+            source.zip

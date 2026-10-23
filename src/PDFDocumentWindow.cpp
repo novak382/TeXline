@@ -1,0 +1,1486 @@
+#include "ResearchProject.h"
+/*
+	This is part of TeXworks, an environment for working with TeX documents
+	Copyright (C) 2007-2023  Jonathan Kew, Stefan Löffler, Charlie Sharpsteen
+
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+	For links to further information, or to contact the authors,
+	see <https://tug.org/texworks/>.
+*/
+
+#include "PDFDocumentWindow.h"
+#include <QHBoxLayout>
+#include "ResearchAppearance.h"
+#include "ResearchBuild.h"
+#include "ResearchAnnotations.h"
+#include "ResearchReferences.h"
+#include "utils/FilePath.h"
+
+#include "../modules/QtPDF/src/PDFDocumentScene.h"
+#include <QSpinBox>
+#include <QDoubleSpinBox>
+#include <QSignalBlocker>
+#include "FindDialog.h"
+#include "Settings.h"
+#include "TWApp.h"
+#include "TWUtils.h"
+#include "TeXDocumentWindow.h"
+#include "utils/WindowManager.h"
+
+#include <QCloseEvent>
+#include <QCryptographicHash>
+#include <QFile>
+#include <QDesktopServices>
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#include <QDesktopWidget>
+#endif
+#include <QDockWidget>
+#include <QFileDialog>
+#include <QFileSystemWatcher>
+#include <QSet>
+#include <QInputDialog>
+#include <QLabel>
+#include <QList>
+#include <QMessageBox>
+#include <QPaintEngine>
+#include <QPainter>
+#include <QRegion>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QScopedValueRollback>
+#include <QShortcut>
+#include <QToolBar>
+#include <QToolButton>
+#include <QActionGroup>
+#include <QSignalMapper>
+#include <QStack>
+#include <QStatusBar>
+#include <QStyle>
+#include <QToolTip>
+#include <QUrl>
+#include <QVector>
+#include <QShortcut>
+#include <cmath>
+
+
+#define SYNCTEX_GZ_EXT	".synctex.gz"
+#define SYNCTEX_EXT		".synctex"
+
+#define ROUND(x) floor((x)+0.5)
+
+// Possible sizes of the magnifying glass (in pixel)
+const int magSizes[] = { 200, 300, 400 };
+
+// duration of highlighting in PDF view (might make configurable?)
+const int kPDFHighlightDuration = 2000;
+
+
+
+// TODO: This is seemingly unused---verify && remove
+QList<PDFDocumentWindow*> PDFDocumentWindow::docList;
+
+PDFDocumentWindow::PDFDocumentWindow(const QString &fileName, TeXDocumentWindow *texDoc)
+	: pdfWidget(nullptr)
+	, scrollArea(nullptr)
+	, toolButtonGroup(nullptr)
+	, pageLabel(nullptr)
+	, scaleLabel(nullptr)
+	, _fullScreenManager(nullptr)
+	, _syncHighlight(nullptr)
+	, openedManually(false)
+{
+	init();
+
+	if (!texDoc)
+		openedManually = true;
+
+	loadFile(fileName);
+
+	QMap<QString,QVariant> properties = TWApp::instance()->getFileProperties(curFile);
+	if (properties.contains(QString::fromLatin1("geometry")))
+		restoreGeometry(properties.value(QString::fromLatin1("geometry")).toByteArray());
+	else
+		Tw::Utils::WindowManager::zoomToHalfScreen(this, true);
+
+	if (properties.contains(QString::fromLatin1("state")))
+		restoreState(properties.value(QString::fromLatin1("state")).toByteArray(), kPDFWindowStateVersion);
+	Research::restoreWorkspace(this);
+	if (properties.contains(QString::fromLatin1("geometry")))
+		Tw::Utils::WindowManager::correctPaperHalfScreen(this);
+
+	if (properties.contains(QString::fromLatin1("pdfPageMode")))
+		setPageMode(properties.value(QString::fromLatin1("pdfPageMode"), -1).toInt());
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 4, 0)
+	QTimer::singleShot(100, this, SLOT(setDefaultScale()));
+#else
+	QTimer::singleShot(100, this, &PDFDocumentWindow::setDefaultScale);
+#endif
+
+	if (texDoc) {
+		stackUnder(texDoc);
+		actionSide_by_Side->setEnabled(true);
+		actionGo_to_Source->setEnabled(true);
+		sourceDocList.append(texDoc);
+	}
+}
+
+PDFDocumentWindow::~PDFDocumentWindow()
+{
+	// Disconnect from windowListChanged notifications to avoid getting the
+	// signal after our TeXDocumentWindow is destroyed (but before the base
+	// QObject is destroyed, in which case the system wouldn't know what to do
+	// with the signal)
+	disconnect(TWApp::instance(), &TWApp::windowListChanged, this, nullptr);
+	docList.removeAll(this);
+#if defined(Q_OS_DARWIN)
+	// Work around QTBUG-17941
+	QTimer::singleShot(0, TWApp::instance(), &TWApp::recreateSpecialMenuItems);
+#endif // defined(Q_OS_DARWIN)
+}
+
+void PDFDocumentWindow::init()
+{
+	docList.append(this);
+
+	setupUi(this);
+
+	setAttribute(Qt::WA_DeleteOnClose, true);
+
+	QIcon winIcon;
+#if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)
+	// The Compiz window manager doesn't seem to support icons larger than
+	// 128x128, so we add a suitable one first
+	winIcon.addFile(QString::fromLatin1(":/images/images/TeXworks-doc-128.png"));
+#endif
+	winIcon.addFile(QString::fromLatin1(":/images/images/TeXworks-doc.png"));
+	setWindowIcon(winIcon);
+
+	pdfWidget = new QtPDF::PDFDocumentWidget(this);
+	pdfWidget->setSearchResultHighlightBrush(QBrush(Qt::transparent));
+	pdfWidget->setCurrentSearchResultHighlightBrush(QBrush(Qt::transparent));
+	pdfWidget->setAcceptDrops(false);
+	_searchResultHighlightBrush = QColor(255, 255, 0, 63);
+	setCentralWidget(pdfWidget);
+
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::changedPage, this, &PDFDocumentWindow::updateStatusBar);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::changedZoom, this, &PDFDocumentWindow::updateStatusBar);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::changedDocument, this, &PDFDocumentWindow::changedDocument);
+	// NB: Using a queued connection ensures the signal has to pass through the
+	// event loop. If searching effectively blocks the GUI for a while (e.g., by
+	// spawning too many threads), this ensures that the highlighting processing
+	// (including clearing the highlighting after kPDFHighlightDuration) only
+	// starts when the GUI is responsive (i.e., the highlight is actually
+	// displayed)
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::searchResultHighlighted, this, &PDFDocumentWindow::searchResultHighlighted, Qt::QueuedConnection);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::changedPageMode, this, &PDFDocumentWindow::updatePageMode);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::requestOpenPdf, this, &PDFDocumentWindow::maybeOpenPdf);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::requestOpenUrl, this, &PDFDocumentWindow::maybeOpenUrl);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::textSelectionChanged, this, &PDFDocumentWindow::maybeEnableCopyCommand);
+
+	toolButtonGroup = new QButtonGroup(toolBar);
+	toolButtonGroup->addButton(qobject_cast<QAbstractButton*>(toolBar->widgetForAction(actionMagnify)), QtPDF::PDFDocumentView::MouseMode_MagnifyingGlass);
+	toolButtonGroup->addButton(qobject_cast<QAbstractButton*>(toolBar->widgetForAction(actionScroll)), QtPDF::PDFDocumentView::MouseMode_Move);
+	toolButtonGroup->addButton(qobject_cast<QAbstractButton*>(toolBar->widgetForAction(actionSelect_Text)), QtPDF::PDFDocumentView::MouseMode_Select);
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+	connect(toolButtonGroup, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &PDFDocumentWindow::setMouseMode);
+#else
+	connect(toolButtonGroup, &QButtonGroup::idClicked, this, &PDFDocumentWindow::setMouseMode);
+#endif
+	pdfWidget->setMouseModeMagnifyingGlass();
+
+	scaleLabel = new Tw::UI::ClickableLabel();
+	statusBar()->addPermanentWidget(scaleLabel);
+	scaleLabel->setFrameStyle(QFrame::StyledPanel);
+	scaleLabel->setFont(statusBar()->font());
+	connect(scaleLabel, &Tw::UI::ClickableLabel::mouseLeftClick, this, &PDFDocumentWindow::scaleLabelClick);
+
+	pageLabel = new Tw::UI::ClickableLabel();
+	statusBar()->addPermanentWidget(pageLabel);
+	pageLabel->setFrameStyle(QFrame::StyledPanel);
+	pageLabel->setFont(statusBar()->font());
+	connect(pageLabel, &Tw::UI::ClickableLabel::mouseLeftClick, this, &PDFDocumentWindow::doPageDialog);
+	statusBar()->removeWidget(scaleLabel);scaleLabel->hide();statusBar()->removeWidget(pageLabel);pageLabel->hide();
+	researchZoomField=new QDoubleSpinBox(statusBar());researchZoomField->setObjectName(QStringLiteral("researchPdfZoomField"));researchZoomField->setRange(0.01,2147483647);researchZoomField->setDecimals(2);researchZoomField->setSuffix(QStringLiteral("%"));researchZoomField->setButtonSymbols(QAbstractSpinBox::NoButtons);researchZoomField->setKeyboardTracking(false);researchZoomField->setToolTip(Research::ui(QStringLiteral("缩放比例")));researchZoomField->setAccessibleName(researchZoomField->toolTip());statusBar()->addPermanentWidget(researchZoomField);
+	auto *pageControl=new QWidget(statusBar());pageControl->setObjectName(QStringLiteral("researchPdfPageControl"));pageControl->setSizePolicy(QSizePolicy::Maximum,QSizePolicy::Fixed);
+	auto *pageLayout=new QHBoxLayout(pageControl);pageLayout->setContentsMargins(0,0,0,0);pageLayout->setSpacing(0);
+	researchPageField=new QSpinBox(pageControl);researchPageField->setObjectName(QStringLiteral("researchPdfPageField"));researchPageField->setRange(1,1);researchPageField->setButtonSymbols(QAbstractSpinBox::NoButtons);researchPageField->setKeyboardTracking(false);researchPageField->setAlignment(Qt::AlignRight);researchPageField->setToolTip(Research::ui(QStringLiteral("页码")));researchPageField->setAccessibleName(researchPageField->toolTip());pageLayout->addWidget(researchPageField);
+	researchPageTotal=new QLabel(pageControl);researchPageTotal->setObjectName(QStringLiteral("researchPdfPageTotal"));researchPageTotal->setText(QStringLiteral("/ 1"));researchPageTotal->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Preferred);pageLayout->addWidget(researchPageTotal);statusBar()->addPermanentWidget(pageControl);
+	updateResearchPdfFieldWidths();
+	connect(researchPageField,&QSpinBox::editingFinished,this,[this]{pdfWidget->goToPage(researchPageField->value()-1);pdfWidget->setFocus();if(property("researchFocus").toBool())statusBar()->hide();});
+	connect(researchZoomField,&QDoubleSpinBox::editingFinished,this,[this]{pdfWidget->setZoomLevel(researchZoomField->value()/100);pdfWidget->setFocus();if(property("researchFocus").toBool())statusBar()->hide();});
+	for(auto *field:QList<QWidget *>{researchPageField,researchZoomField}){auto *escape=new QShortcut(QKeySequence(Qt::Key_Escape),field);escape->setContext(Qt::WidgetWithChildrenShortcut);connect(escape,&QShortcut::activated,this,[this]{researchPageField->setValue(int(pdfWidget->currentPage())+1);researchZoomField->setValue(pdfWidget->zoomLevel()*100);pdfWidget->setFocus();if(property("researchFocus").toBool())statusBar()->hide();});}
+
+	connect(actionAbout_TW, &QAction::triggered, TWApp::instance(), &TWApp::about);
+	connect(actionSettings_and_Resources, &QAction::triggered, TWApp::instance(), &TWApp::doResourcesDialog);
+	connect(actionGoToHomePage, &QAction::triggered, TWApp::instance(), &TWApp::goToHomePage);
+	connect(actionWriteToMailingList, &QAction::triggered, TWApp::instance(), &TWApp::writeToMailingList);
+
+	connect(actionNew, &QAction::triggered, TWApp::instance(), &TWApp::newFile);
+	connect(actionNew_from_Template, &QAction::triggered, TWApp::instance(), &TWApp::newFromTemplate);
+	connect(actionOpen, &QAction::triggered, []() { TWApp::instance()->open(TWUtils::chooseDefaultFilter(QStringLiteral("a.pdf"), *TWUtils::filterList())); });
+	connect(actionPrintPdf, &QAction::triggered, this, &PDFDocumentWindow::print);
+
+	connect(actionQuit_TeXworks, &QAction::triggered, TWApp::instance(), &TWApp::maybeQuit);
+
+	connect(actionCopy, &QAction::triggered, this, &PDFDocumentWindow::copySelectedTextToClipboard);
+
+	connect(actionFind, &QAction::triggered, this, &PDFDocumentWindow::doFindDialog);
+
+	connect(actionFirst_Page, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::goFirst);
+	connect(actionPrevious_Page, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::goPrev);
+	connect(actionNext_Page, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::goNext);
+	connect(actionLast_Page, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::goLast);
+	connect(actionGo_to_Page, &QAction::triggered, this, &PDFDocumentWindow::doPageDialog);
+	addAction(actionPrevious_ViewRect);
+	connect(actionPrevious_ViewRect, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::goPrevViewRect);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::changedPage, this, &PDFDocumentWindow::enablePageActions);
+
+	connect(actionActual_Size, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::zoom100);
+	connect(actionFit_to_Width, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::zoomFitWidth);
+	connect(actionFit_to_Window, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::zoomFitWindow);
+	connect(actionFit_to_Content_Width, &QAction::triggered, pdfWidget, &QtPDF::PDFDocumentWidget::zoomFitContentWidth);
+	connect(actionZoom_In, &QAction::triggered, pdfWidget, [=]() { pdfWidget->zoomIn(); });
+	connect(actionZoom_Out, &QAction::triggered, pdfWidget, [=]() { pdfWidget->zoomOut(); });
+	connect(actionFull_Screen, &QAction::triggered, this, &PDFDocumentWindow::toggleFullScreen);
+	connect(actionRuler, &QAction::toggled, pdfWidget, &QtPDF::PDFDocumentView::showRuler);
+	connect(pdfWidget, &QtPDF::PDFDocumentWidget::contextClick, this, &PDFDocumentWindow::syncClick);
+	_inverseSyncTimer.setSingleShot(true);
+	_inverseSyncTimer.setInterval(30);
+	connect(&_inverseSyncTimer, &QTimer::timeout, this, [this]() {
+		if (_syncInProgress) { _inverseSyncTimer.start(); return; }
+		Tw::Settings settings;
+		const auto resolution = static_cast<TWSynchronizer::Resolution>(qBound(0,
+			settings.value(QStringLiteral("syncResolutionToTeX"), TWSynchronizer::kDefault_Resolution_ToTeX).toInt(), 2));
+		syncRange(_pendingSyncPage, _pendingSyncPosition, _pendingSyncPosition, resolution);
+	});
+	pageModeSignalMapper.setMapping(actionPageMode_Single, QtPDF::PDFDocumentView::PageMode_SinglePage);
+	pageModeSignalMapper.setMapping(actionPageMode_Continuous, QtPDF::PDFDocumentView::PageMode_OneColumnContinuous);
+	pageModeSignalMapper.setMapping(actionPageMode_TwoPagesContinuous, QtPDF::PDFDocumentView::PageMode_TwoColumnContinuous);
+	connect(actionPageMode_Single, &QAction::triggered, &pageModeSignalMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+	connect(actionPageMode_Continuous, &QAction::triggered, &pageModeSignalMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+	connect(actionPageMode_TwoPagesContinuous, &QAction::triggered, &pageModeSignalMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+	connect(&pageModeSignalMapper, static_cast<void (QSignalMapper::*)(int)>(&QSignalMapper::mapped), this, &PDFDocumentWindow::setPageMode);
+#else
+	connect(&pageModeSignalMapper, &QSignalMapper::mappedInt, this, &PDFDocumentWindow::setPageMode);
+#endif
+
+	if (actionZoom_In->shortcut() == QKeySequence(tr("Ctrl++")))
+		new QShortcut(QKeySequence(tr("Ctrl+=")), pdfWidget, SLOT(zoomIn()));
+
+	connect(actionTypeset, &QAction::triggered, this, &PDFDocumentWindow::retypeset);
+
+	connect(actionStack, &QAction::triggered, TWApp::instance(), &TWApp::stackWindows);
+	connect(actionTile, &QAction::triggered, TWApp::instance(), &TWApp::tileWindows);
+	connect(actionSide_by_Side, &QAction::triggered, this, &PDFDocumentWindow::sideBySide);
+	connect(actionPlace_on_Left, &QAction::triggered, this, &PDFDocumentWindow::placeOnLeft);
+	connect(actionPlace_on_Right, &QAction::triggered, this, &PDFDocumentWindow::placeOnRight);
+	connect(actionGo_to_Source, &QAction::triggered, this, &PDFDocumentWindow::goToSource);
+
+	connect(actionFind_Again, &QAction::triggered, this, &PDFDocumentWindow::doFindAgain);
+
+	updateRecentFileActions();
+	connect(TWApp::instance(), &TWApp::recentFileActionsChanged, this, &PDFDocumentWindow::updateRecentFileActions);
+	connect(TWApp::instance(), &TWApp::windowListChanged, this, &PDFDocumentWindow::updateWindowMenu);
+	connect(actionClear_Recent_Files, &QAction::triggered, TWApp::instance(), &TWApp::clearRecentFiles);
+
+	connect(TWApp::instance(), &TWApp::hideFloatersExcept, this, &PDFDocumentWindow::hideFloatersUnlessThis);
+	connect(this, &PDFDocumentWindow::activatedWindow, TWApp::instance(), &TWApp::activatedWindow);
+
+	connect(actionPreferences, &QAction::triggered, TWApp::instance(), &TWApp::preferences);
+
+	connect(this, &PDFDocumentWindow::destroyed, TWApp::instance(), &TWApp::updateWindowMenus);
+
+	connect(TWApp::instance(), &TWApp::syncPdf, this, &PDFDocumentWindow::syncFromSource);
+
+	_syncHighlightRemover.setSingleShot(true);
+	connect(&_syncHighlightRemover, &QTimer::timeout, this, &PDFDocumentWindow::clearSyncHighlight);
+
+	_searchResultHighlightRemover.setSingleShot(true);
+	connect(&_searchResultHighlightRemover, &QTimer::timeout, this, &PDFDocumentWindow::clearSearchResultHighlight);
+
+	menuShow->addAction(toolBar->toggleViewAction());
+	menuShow->addSeparator();
+
+	QDockWidget * dw = pdfWidget->dockWidget(QtPDF::PDFDocumentView::Dock_TableOfContents, this);
+	dw->hide();
+	addDockWidget(Qt::LeftDockWidgetArea, dw);
+	menuShow->addAction(dw->toggleViewAction());
+
+	dw = pdfWidget->dockWidget(QtPDF::PDFDocumentView::Dock_MetaData, this);
+	dw->hide();
+	addDockWidget(Qt::LeftDockWidgetArea, dw);
+	menuShow->addAction(dw->toggleViewAction());
+
+	dw = pdfWidget->dockWidget(QtPDF::PDFDocumentView::Dock_Fonts, this);
+	dw->hide();
+	addDockWidget(Qt::BottomDockWidgetArea, dw);
+	menuShow->addAction(dw->toggleViewAction());
+
+	dw = pdfWidget->dockWidget(QtPDF::PDFDocumentView::Dock_Permissions, this);
+	dw->hide();
+	addDockWidget(Qt::LeftDockWidgetArea, dw);
+	menuShow->addAction(dw->toggleViewAction());
+
+	dw = pdfWidget->dockWidget(QtPDF::PDFDocumentView::Dock_Annotations, this);
+	dw->hide();
+	addDockWidget(Qt::LeftDockWidgetArea, dw);
+	menuShow->addAction(dw->toggleViewAction());
+
+	dw = pdfWidget->dockWidget(QtPDF::PDFDocumentView::Dock_OptionalContent, this);
+	dw->hide();
+	addDockWidget(Qt::LeftDockWidgetArea, dw);
+	menuShow->addAction(dw->toggleViewAction());
+
+	Tw::Settings settings;
+	switch(settings.value(QString::fromLatin1("pdfPageMode"), kDefault_PDFPageMode).toInt()) {
+		case 0:
+			setPageMode(QtPDF::PDFDocumentView::PageMode_SinglePage);
+			break;
+		case 1:
+			setPageMode(QtPDF::PDFDocumentView::PageMode_OneColumnContinuous);
+			break;
+		case 2:
+			setPageMode(QtPDF::PDFDocumentView::PageMode_TwoColumnContinuous);
+			break;
+		default:
+			setPageMode(kDefault_PDFPageMode);
+			break;
+	}
+
+	const int pdfRulerUnits = settings.value(QStringLiteral("pdfRulerUnits"), kDefault_PreviewRulerUnits).toInt();
+	switch (pdfRulerUnits) {
+		case 0: pdfWidget->ruler()->setUnit(QtPDF::Physical::Length::Centimeters); break;
+		case 1: pdfWidget->ruler()->setUnit(QtPDF::Physical::Length::Inches); break;
+		case 2: pdfWidget->ruler()->setUnit(QtPDF::Physical::Length::Bigpoints); break;
+	}
+	actionRuler->setChecked(settings.value(QStringLiteral("pdfRulerShow"), kDefault_PreviewRulerShow).toBool());
+
+	resetMagnifier();
+
+	if (settings.contains(QString::fromLatin1("previewResolution"))) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+		pdfWidget->setResolution(settings.value(QString::fromLatin1("previewResolution"), QApplication::desktop()->logicalDpiX()).toInt());
+#else
+		pdfWidget->setResolution(settings.value(QString::fromLatin1("previewResolution"), screen()->logicalDotsPerInch()).toInt());
+#endif
+	}
+
+	TWUtils::applyToolbarOptions(this, settings.value(QString::fromLatin1("toolBarIconSize"), 2).toInt(), settings.value(QString::fromLatin1("toolBarShowText"), false).toBool());
+
+	TWApp::instance()->updateWindowMenus();
+
+	initScriptable(menuScripts, actionAbout_Scripts, actionManage_Scripts,
+				   actionUpdate_Scripts, actionShow_Scripts_Folder);
+
+	TWUtils::insertHelpMenuItems(menuHelp);
+	TWUtils::installCustomShortcuts(this);
+
+	pdfWidget->setMouseTracking(true);
+	_fullScreenManager = new Tw::Utils::FullscreenManager(this);
+	_fullScreenManager->addShortcut(actionFull_Screen, SLOT(toggleFullScreen()));
+	connect(_fullScreenManager, &Tw::Utils::FullscreenManager::fullscreenChanged, actionFull_Screen, &QAction::setChecked);
+	connect(_fullScreenManager, &Tw::Utils::FullscreenManager::fullscreenChanged, this, &PDFDocumentWindow::maybeZoomToWindow, Qt::QueuedConnection);
+
+	connect(&(TWApp::instance()->typesetManager()), &Tw::Utils::TypesetManager::typesettingStarted, this, &PDFDocumentWindow::updateTypesettingAction);
+	connect(&(TWApp::instance()->typesetManager()), &Tw::Utils::TypesetManager::typesettingStopped, this, &PDFDocumentWindow::updateTypesettingAction);
+	setupResearchWorkspace();
+	researchRevisionLabel = new QLabel(this);
+	researchRevisionLabel->setObjectName(QStringLiteral("researchPdfRevision"));
+	statusBar()->addPermanentWidget(researchRevisionLabel);
+	researchRevisionLabel->hide();
+	researchRevisionWatcher = new QFileSystemWatcher(this);
+	researchRevisionTimer.setSingleShot(true); researchRevisionTimer.setInterval(400);
+	connect(researchRevisionWatcher, &QFileSystemWatcher::fileChanged, this, [this]() { researchRevisionTimer.start(); });
+	connect(researchRevisionWatcher, &QFileSystemWatcher::directoryChanged, this, [this]() { researchRevisionTimer.start(); });
+	connect(&researchRevisionTimer, &QTimer::timeout, this, &PDFDocumentWindow::refreshResearchRevision);
+}
+
+void PDFDocumentWindow::setupResearchWorkspace()
+{
+	toolBar->clear();
+	toolBar->setToolButtonStyle(Qt::ToolButtonTextOnly);
+	Research::workspaceButton(toolBar, Research::ui(QStringLiteral("源码")), QString(), actionGo_to_Source);
+	toolBar->actions().last()->setProperty("researchFocusRight", true);
+	Research::installReadingNavigation(this);actionPrevious_ViewRect->setShortcut(QKeySequence());
+	auto *back = Research::workspaceButton(toolBar, QString(), QString(), findChild<QAction*>(QStringLiteral("researchNavigateBack")));
+	connect(pdfWidget,&QtPDF::PDFDocumentView::navigationStarted,this,[this]{if(!_syncInProgress&&QApplication::activeWindow()==this)Research::rememberReadingPlace(this);});
+	back->setIcon(QIcon(QStringLiteral(":/research/icons/back.svg")));
+	back->setToolTip(Research::ui(QStringLiteral("返回上次位置"))); back->setAccessibleName(Research::ui(QStringLiteral("返回上次位置")));
+	toolBar->actions().last()->setProperty("researchFocusHidden", true);
+	auto *view = Research::workspaceButton(toolBar, Research::ui(QStringLiteral("查看")));
+	view->setObjectName(QStringLiteral("researchViewMenu"));
+	auto *views = new QMenu(view);
+	views->addAction(actionFit_to_Content_Width); views->addAction(actionFit_to_Width);
+	views->addAction(actionFit_to_Window); views->addAction(actionActual_Size);
+	views->addSeparator(); views->addAction(actionZoom_In); views->addAction(actionZoom_Out);
+	view->setMenu(views); view->setPopupMode(QToolButton::MenuButtonPopup);
+	Research::configureButton(view, Research::ButtonRole::Menu);
+	connect(view, &QToolButton::clicked, view, &QToolButton::showMenu);
+	auto *find = Research::workspaceButton(toolBar, QString(), QStringLiteral(":/research/icons/find.svg"), actionFind);
+	find->setToolTip(Research::ui(QStringLiteral("查找 · Ctrl+F"))); find->setAccessibleName(Research::ui(QStringLiteral("查找")));
+	toolBar->actions().last()->setProperty("researchFocusHidden", true);
+	auto *space = new QWidget(toolBar);
+	space->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred); toolBar->addWidget(space);
+	toolBar->addAction(actionTypeset);
+	auto *compile = qobject_cast<QToolButton *>(toolBar->widgetForAction(actionTypeset));
+	compile->setObjectName(QStringLiteral("researchCompile")); compile->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+	auto *engines = new QMenu(compile); engines->setObjectName(QStringLiteral("researchEngineMenu"));
+	connect(engines, &QMenu::aboutToShow, this, [this, engines]() {
+		engines->clear();
+		if (auto *source = getFirstTeXDocumentWindow(true)) source->populateResearchEngineMenu(engines);
+	});
+	compile->setMenu(engines); compile->setPopupMode(QToolButton::MenuButtonPopup);
+	Research::configureButton(compile, Research::ButtonRole::Compile);
+	auto *more = new QMenu(this);
+	more->setObjectName(QStringLiteral("researchMoreMenu"));
+	more->addAction(actionFind); more->addAction(actionPrintPdf); more->addAction(actionSide_by_Side);
+	auto *tools = more->addMenu(Research::ui(QStringLiteral("鼠标工具")));
+	auto *group = new QActionGroup(this); group->setExclusive(true);
+	group->addAction(actionSelect_Text); group->addAction(actionScroll); group->addAction(actionMagnify);
+	tools->addAction(actionSelect_Text); tools->addAction(actionScroll); tools->addAction(actionMagnify);
+	connect(actionSelect_Text, &QAction::triggered, this, [this]() { setMouseMode(QtPDF::PDFDocumentView::MouseMode_Select); });
+	connect(actionScroll, &QAction::triggered, this, [this]() { setMouseMode(QtPDF::PDFDocumentView::MouseMode_Move); });
+	connect(actionMagnify, &QAction::triggered, this, [this]() { setMouseMode(QtPDF::PDFDocumentView::MouseMode_MagnifyingGlass); });
+	actionSelect_Text->setChecked(true); setMouseMode(QtPDF::PDFDocumentView::MouseMode_Select);
+	auto *pages = more->addMenu(Research::ui(QStringLiteral("页面")));
+	pages->addAction(actionFirst_Page); pages->addAction(actionPrevious_Page);
+	pages->addAction(actionNext_Page); pages->addAction(actionLast_Page); pages->addAction(actionGo_to_Page);
+	more->addAction(actionPreferences);
+	Research::installWorkspace(this, toolBar, more);
+	if (auto *zoom = findChild<QToolButton *>(QStringLiteral("researchFocusZoom"))) {
+		const QList<QAction *> modes{actionFit_to_Window, actionFit_to_Width, actionFit_to_Content_Width};
+		updateResearchFitIcon(2);
+		for (int index = 0; index < modes.size(); ++index)
+			connect(modes[index], &QAction::triggered, zoom, [this, index] { updateResearchFitIcon(index); });
+		auto *menu=new QMenu(zoom);menu->setObjectName(QStringLiteral("researchPdfFitMenu"));for(auto *action:modes)menu->addAction(action);menu->addAction(actionActual_Size);zoom->setMenu(menu);zoom->setPopupMode(QToolButton::InstantPopup);zoom->setToolTip(Research::ui(QStringLiteral("选择页面适配方式")));
+		for(auto *a:menu->actions())a->setCheckable(true);
+		connect(actionActual_Size,&QAction::triggered,this,[this]{setProperty("researchPdfFitMode",3);});
+		connect(menu,&QMenu::aboutToShow,this,[this,menu]{const int mode=property("researchPdfFitMode").isValid()?property("researchPdfFitMode").toInt():-1;for(int i=0;i<menu->actions().size();++i)menu->actions()[i]->setChecked(i==mode);});
+	}
+	Research::installReferencePreview(this);
+	Research::installAnnotations(this, toolBar, more);
+	updateTypesettingAction();
+}
+
+void PDFDocumentWindow::updateResearchFitIcon(int mode)
+{
+	if (mode < 0 || mode > 2) return;
+	setProperty("researchPdfFitMode",mode);
+	if (auto *zoom = findChild<QToolButton *>(QStringLiteral("researchFocusZoom"))) {
+		const char *names[]{"fit-page.svg", "fit-width.svg", "fit-content.svg"};
+		zoom->setProperty("researchZoomPreset", mode);
+		zoom->setIcon(QIcon(QStringLiteral(":/research/icons/") + QString::fromLatin1(names[mode])));
+	}
+}
+
+void PDFDocumentWindow::changeEvent(QEvent *event)
+{
+	if (event->type() == QEvent::LanguageChange) {
+		QString title = windowTitle();
+		retranslateUi(this);
+		TWUtils::insertHelpMenuItems(menuHelp);
+		setWindowTitle(title);
+		updateStatusBar();
+		Research::retranslateWorkspace(this);
+		updateTypesettingAction();
+		refreshResearchRevision();
+	}
+	QMainWindow::changeEvent(event);
+	if(event->type()==QEvent::FontChange||event->type()==QEvent::StyleChange||event->type()==QEvent::LanguageChange)
+		QTimer::singleShot(0,this,&PDFDocumentWindow::updateResearchPdfFieldWidths);
+}
+
+void PDFDocumentWindow::linkToSource(TeXDocumentWindow *texDoc)
+{
+	if (texDoc) {
+		if (!sourceDocList.contains(texDoc))
+			sourceDocList.append(texDoc);
+		actionGo_to_Source->setEnabled(true);
+	}
+}
+
+void PDFDocumentWindow::texClosed(QObject *obj)
+{
+	TeXDocumentWindow *texDoc = reinterpret_cast<TeXDocumentWindow*>(obj);
+	// can't use qobject_cast here as the object's metadata is already gone!
+	if (texDoc) {
+		sourceDocList.removeAll(texDoc);
+		if (sourceDocList.empty())
+			close();
+	}
+}
+
+void PDFDocumentWindow::texActivated(TeXDocumentWindow * texDoc)
+{
+	// A source file was activated. Make sure it is the first in the list of
+	// source docs so that future "Goto Source" actions point there.
+	if (sourceDocList.first() != texDoc) {
+		sourceDocList.removeAll(texDoc);
+		sourceDocList.prepend(texDoc);
+	}
+}
+
+void PDFDocumentWindow::updateRecentFileActions()
+{
+	TWUtils::updateRecentFileActions(this, recentFileActions, menuOpen_Recent, actionClear_Recent_Files);
+}
+
+void PDFDocumentWindow::updateWindowMenu()
+{
+	Tw::Utils::WindowManager::updateWindowMenu(this, menuWindow);
+
+	const QString label = Tw::Utils::WindowManager::uniqueLabelForFile(fileName());
+	if (!label.isEmpty()) {
+		setWindowTitle(property("researchFocus").toBool() ? tr("%1[*]").arg(label) : tr("%1[*] - %2").arg(label, QApplication::applicationDisplayName()));
+	}
+}
+
+void PDFDocumentWindow::sideBySide()
+{
+	if (sourceDocList.count() > 0) {
+		Tw::Utils::WindowManager::sideBySide(sourceDocList.first(), this);
+		sourceDocList.first()->selectWindow(false);
+		selectWindow();
+	}
+	else
+		placeOnRight();
+}
+
+bool PDFDocumentWindow::event(QEvent *event)
+{
+	switch (event->type()) {
+		case QEvent::WindowActivate:
+			showFloaters();
+			emit activatedWindow(this);
+			break;
+		default:
+			break;
+	}
+	return QMainWindow::event(event);
+}
+
+void PDFDocumentWindow::closeEvent(QCloseEvent *event)
+{
+	event->accept();
+	if (openedManually) {
+		saveRecentFileInfo();
+	}
+	deleteLater();
+}
+
+void PDFDocumentWindow::saveRecentFileInfo()
+{
+	QMap<QString,QVariant> fileProperties;
+	fileProperties.insert(QString::fromLatin1("path"), curFile);
+	fileProperties.insert(QString::fromLatin1("geometry"), saveGeometry());
+	fileProperties.insert(QString::fromLatin1("state"), saveState(kPDFWindowStateVersion));
+	fileProperties.insert(QString::fromLatin1("pdfPageMode"), pdfWidget->pageMode());
+	TWApp::instance()->addToRecentFiles(fileProperties);
+}
+
+QString PDFDocumentWindow::getMainSourceFilename() const
+{
+	const QString recordedRoot = Research::pdfSourceRoot(curFile);
+	if (!recordedRoot.isEmpty()) return recordedRoot;
+	// If there are any open source documents, use their root path
+	for (TeXDocumentWindow * const win : sourceDocList) {
+		if (win == nullptr) {
+			continue;
+		}
+		const Tw::Document::TeXDocument * const doc = win->textDoc();
+		if (doc == nullptr) {
+			continue;
+		}
+		const QString path = doc->getRootFilePath();
+		if (QFileInfo::exists(path)) {
+				return path;
+		}
+	}
+	// If we have synchronization data, use the document that corresponds to the
+	// top left corner of the first page
+	// TODO: Is this necessarily a TeX file (and not, e.g., an aux file in case
+	// the first page is not a standard text page such as a toc, titlepage, or
+	// index/bibliography)?
+	if (_synchronizer) {
+		const TWSynchronizer::TeXSyncPoint syncPt = _synchronizer->syncFromPDF({fileName(), 0, QList<QRectF>() << QRectF()}, TWSynchronizer::LineResolution);
+		if (QFileInfo::exists(syncPt.filename)) {
+			return syncPt.filename;
+		}
+	}
+	// If all else fails, assume a .tex file with the same base name as the pdf
+	// is the root source file (this might be flakey, though, e.g. in case
+	// \jobname is redefined or non-standard typesetting tools are used)
+	QString src = fileName();
+	if (src.endsWith(QStringLiteral(".pdf"))) {
+		src.replace(src.length() - 3, 3, QStringLiteral("tex"));
+		if (QFileInfo::exists(src)) {
+			return src;
+		}
+	}
+	return {};
+}
+
+TeXDocumentWindow * PDFDocumentWindow::getFirstTeXDocumentWindow(const bool openIfNecessary)
+{
+	for (TeXDocumentWindow * const src : sourceDocList) {
+		if (src != nullptr) {
+			return src;
+		}
+	}
+	if (!openIfNecessary) {
+		return nullptr;
+	}
+	return TeXDocumentWindow::openDocument(getMainSourceFilename(), false);
+}
+
+void PDFDocumentWindow::loadFile(const QString &fileName)
+{
+	setCurrentFile(fileName);
+	Tw::Settings settings;
+	QFileInfo info(fileName);
+	settings.setValue(QString::fromLatin1("openDialogDir"), info.canonicalPath());
+
+	reload();
+}
+
+void PDFDocumentWindow::reload()
+{
+	Research::beforeAnnotationReload(this);
+	QApplication::setOverrideCursor(Qt::WaitCursor);
+
+	clearSyncHighlight();
+	if (pdfWidget->load(curFile)) {
+		QSharedPointer<QtPDF::Backend::Document> doc = pdfWidget->document().toStrongRef();
+		if (doc) {
+			Tw::Settings settings;
+			doc->setPaperColor(settings.value(QStringLiteral("pdfPaperColor"), QVariant::fromValue<QColor>(kDefault_PaperColor)).value<QColor>());
+		}
+		loadSyncData();
+		emit reloaded();
+	}
+	else {
+		statusBar()->showMessage(tr("Failed to load file \"%1\"; perhaps it is not a valid PDF document.").arg(Tw::Utils::WindowManager::strippedName(curFile)));
+	}
+	updateTypesettingAction();
+	if (Research::managedPreview(curFile)) pdfWidget->setWatchForDocumentChangesOnDisk(false);
+	refreshResearchRevision();
+	QApplication::restoreOverrideCursor();
+}
+
+void PDFDocumentWindow::adoptPreviewFile(const QString &filename)
+{
+	setCurrentFile(filename);
+	researchDependencyRoot.clear();
+	reload();
+}
+
+void PDFDocumentWindow::refreshResearchRevision()
+{
+	if (!researchRevisionLabel || curFile.isEmpty()) return;
+	const QString root = getMainSourceFilename();
+	const auto state = Research::pdfRevision(curFile, root);
+	const bool previous=state==Research::PdfRevision::Stale;
+	const QString hint=previous?(Research::englishUi()?QStringLiteral("Previous PDF · Rebuild to update"):Research::ui(QStringLiteral("上一版 PDF · 编译后更新"))):state==Research::PdfRevision::Unpaired?Research::ui(QStringLiteral("PDF 版本不匹配")):Research::ui(QStringLiteral("PDF 版本未核对"));
+	researchRevisionLabel->setProperty("researchRoutineRevision",previous);
+	researchRevisionLabel->setText(previous?QString(QChar(0x2022)):hint);
+	researchRevisionLabel->setToolTip(hint);researchRevisionLabel->setAccessibleName(hint);
+	researchRevisionLabel->setVisible(!root.isEmpty() && state != Research::PdfRevision::Current);
+	Research::refreshFocusMessage(this);
+	if (root != researchDependencyRoot || state == Research::PdfRevision::Current) {
+		researchDependencyRoot = root;
+		const auto oldFiles = researchRevisionWatcher->files(), oldDirs = researchRevisionWatcher->directories();
+		if (!oldFiles.isEmpty()) researchRevisionWatcher->removePaths(oldFiles);
+		if (!oldDirs.isEmpty()) researchRevisionWatcher->removePaths(oldDirs);
+		QStringList files = root.isEmpty() ? QStringList{} : Research::buildDependencies(root);
+		files.append(Research::pdfMetadataReadFile(curFile));
+		QSet<QString> directories;
+		for (const auto &file : files) directories.insert(QFileInfo(file).absolutePath());
+		files.removeDuplicates();
+		for (const auto &file : files) if (QFileInfo::exists(file)) researchRevisionWatcher->addPath(file);
+		for (const auto &directory : directories) if (QFileInfo::exists(directory)) researchRevisionWatcher->addPath(directory);
+	}
+}
+
+bool PDFDocumentWindow::researchSyncAllowed()
+{
+	if (Research::pdfCompiledPairValid(curFile)) return true;
+	refreshResearchRevision();
+	Research::showTransientStatusMessage(this, Research::ui(QStringLiteral("PDF 与当前源码尚未核对，请编译一次后再定位。")), kStatusMessageDuration);
+	return false;
+}
+
+void PDFDocumentWindow::loadSyncData()
+{
+	_inverseSyncTimer.stop();
+	const QString sourceRoot = getMainSourceFilename();
+	const auto compiledSources=Research::pdfCompiledSources(curFile);
+	const auto compiledMetadata=Research::pdfMetadata(curFile);const QString compiledPdf=curFile;
+	auto documents=std::make_shared<QHash<QString,std::shared_ptr<Tw::Document::TeXDocument>>>();
+	_synchronizer = std::shared_ptr<TWSyncTeXSynchronizer>(new TWSyncTeXSynchronizer(curFile, [](const QString & filename) {
+			const TeXDocumentWindow * win = TeXDocumentWindow::openDocument(filename, false, false);
+			return (win ? win->textDoc() : nullptr);
+		}, [](const QString & filename) {
+			PDFDocumentWindow * pdfWin = PDFDocumentWindow::findDocument(filename);
+			return (pdfWin && pdfWin->widget() ? pdfWin->widget()->document().toStrongRef() : QSharedPointer<QtPDF::Backend::Document>());
+		}
+	, sourceRoot.isEmpty() ? QString() : QFileInfo(sourceRoot).absolutePath(),[compiledSources,compiledMetadata,compiledPdf,documents](const QString &filename)->const Tw::Document::TeXDocument* {
+		const QString file=Tw::Utils::canonicalSourcePath(filename);
+		auto &document=(*documents)[file];if(document)return document.get();QString text;
+		if(compiledSources.contains(file))text=compiledSources.value(file);
+		else {
+			// Older markers and unopened legacy-encoded files may lack a Unicode
+			// snapshot. Capture the editor's actual codec only while the per-file
+			// disk hash still matches the compiled input, then keep it immutable.
+			const auto inputs=compiledMetadata.value(QStringLiteral("inputs")).toObject();auto entry=inputs.value(file).toObject();
+			if(entry.isEmpty())entry=inputs.value(QFileInfo(compiledPdf).absoluteDir().relativeFilePath(file)).toObject();
+			if(entry.isEmpty())entry=compiledMetadata.value(QStringLiteral("externalDependencies")).toObject().value(file).toObject();
+			const QString expected=entry.value(QStringLiteral("hash")).toString();QFile input(file);if(expected.size()!=64||!input.open(QIODevice::ReadOnly))return nullptr;
+			QCryptographicHash hash(QCryptographicHash::Sha256);if(!hash.addData(&input)||QString::fromLatin1(hash.result().toHex())!=expected)return nullptr;
+			const auto *window=TeXDocumentWindow::openDocument(file,false,false);if(!window||window->isModified())return nullptr;text=window->textDoc()->editorText();
+		}
+		document=std::make_shared<Tw::Document::TeXDocument>(text);return document.get();
+	}));
+	if (!_synchronizer)
+		Research::showTransientStatusMessage(this, tr("Error initializing SyncTeX"), kStatusMessageDuration);
+	else if (!_synchronizer->isValid())
+		Research::showTransientStatusMessage(this, tr("No SyncTeX data available"), kStatusMessageDuration);
+}
+
+void PDFDocumentWindow::syncClick(size_type pageIndex, const QPointF& pos)
+{
+	if (!researchSyncAllowed()) return;
+	if (!_synchronizer || !_synchronizer->isValid()) {
+		Research::showTransientStatusMessage(this, Research::ui(QStringLiteral("当前 PDF 缺少同步数据，请编译一次后再定位源码。")), kStatusMessageDuration);
+		return;
+	}
+	// Run after the mouse tool has returned; a burst keeps only its latest point.
+	_pendingSyncPage = pageIndex;
+	_pendingSyncPosition = pos;
+	_inverseSyncTimer.start();
+}
+
+void PDFDocumentWindow::syncRange(const size_type pageIndex, const QPointF & start, const QPointF & end, const TWSynchronizer::Resolution resolution)
+{
+	if (!researchSyncAllowed()) return;
+	const auto synchronizer = _synchronizer;
+	if (_syncInProgress || !synchronizer || !synchronizer->isValid())
+		return;
+	QScopedValueRollback<bool> syncing(_syncInProgress, true);
+
+	clearSyncHighlight();
+
+	// NOTE: "start" and "end" are in PDF coordinates, which are upside down
+	// (i.e., (0,0) is in the lower left), whereas SyncTeX expects TeX
+	// coordinates (i.e., (0,0) in the upper left). Hence we need to convert the
+	// coordinates.
+	QSharedPointer<QtPDF::Backend::Document> doc = pdfWidget->document().toStrongRef();
+	if (!doc || pageIndex < 0 || pageIndex >= doc->numPages() ||
+		!std::isfinite(start.x()) || !std::isfinite(start.y()))
+		return;
+	QSharedPointer<QtPDF::Backend::Page> page = doc->page(pageIndex).toStrongRef();
+	if (!page)
+		return;
+
+	// Synchronize the point "start"
+	TWSynchronizer::PDFSyncPoint srcStart;
+	srcStart.filename = curFile;
+	srcStart.page = pageIndex + 1;
+	srcStart.rects.append(QRectF(start.x(), page->pageSizeF().height() - start.y(), 0, 0));
+	TWSynchronizer::TeXSyncPoint destStart = synchronizer->syncFromPDF(srcStart, resolution);
+
+	// Syncronize the point "end"
+	TWSynchronizer::TeXSyncPoint destEnd;
+	if (end.isNull() || end == start)
+		// If "end" was not provided or was the same as "start", just copy the
+		// result
+		destEnd = destStart;
+	else {
+		// Otherwise, perform the synchronization
+		TWSynchronizer::PDFSyncPoint srcEnd;
+		srcEnd.filename = curFile;
+		srcEnd.page = pageIndex + 1;
+		srcEnd.rects.append(QRectF(end.x(), page->pageSizeF().height() - end.y(), 0, 0));
+		destEnd = synchronizer->syncFromPDF(srcEnd, resolution);
+	}
+
+	// Check if (at least) "start" was properly synchronized; if not: bail out
+	if (synchronizer != _synchronizer || doc != pdfWidget->document().toStrongRef() ||
+		destStart.filename.isEmpty() || destStart.line <= 0)
+		return;
+
+	// Open the destination document (for the point "start"), and put the cursor
+	// on the right line (though not necessarily on the right column or with the
+	// the right selection, yet, as that requires additional handling below)
+	const QString root = getMainSourceFilename();
+	QDir curDir(root.isEmpty() ? QFileInfo(curFile).canonicalPath() : QFileInfo(root).canonicalPath());
+	Research::rememberReadingPlace(this);
+	TeXDocumentWindow * texDoc = TeXDocumentWindow::openDocument(QFileInfo(curDir, destStart.filename).canonicalFilePath(), true, true, destStart.line);
+	if (!texDoc)
+		return;
+
+	// Get a text cursor in the correct position for "start" (if no valid column
+	// was found, place it at the beginning of the correct line)
+	QTextCursor curStart = texDoc->textCursor();
+	using pos_type = decltype(curStart.position());
+	curStart.setPosition(0);
+	curStart.movePosition(QTextCursor::NextBlock, QTextCursor::MoveAnchor, destStart.line - 1);
+	if (destStart.col >= 0)
+		curStart.movePosition(QTextCursor::NextCharacter, QTextCursor::MoveAnchor, static_cast<pos_type>(destStart.col));
+
+	// Get a text cursor in the correct position for "end" (if no valid column
+	// was found, place it at the end of the correct line)
+	QTextCursor curEnd = texDoc->textCursor();
+	if (destEnd.filename == destStart.filename) {
+		curEnd.setPosition(0);
+		curEnd.movePosition(QTextCursor::NextBlock, QTextCursor::MoveAnchor, destEnd.line - 1);
+		if (destEnd.col >= 0)
+			curEnd.movePosition(QTextCursor::NextCharacter, QTextCursor::MoveAnchor, static_cast<pos_type>(destEnd.col + qMax(1, destEnd.len)));
+		else
+			curEnd.movePosition(QTextCursor::EndOfBlock);
+	}
+	else {
+		// If we get here, the end point is in a different file than the
+		// starting point. In that case, we assume the rest of the file
+		// containing the starting point should be highlighted)
+		curEnd.movePosition(QTextCursor::End);
+	}
+
+	// Properly highlight the destination document
+	// NB: We use TeXDocument::openDocument here even though we already have a
+	// pointer to the document as that is the only publicly available function
+	// that does what we need (i.e., position the cursor and possibly change the
+	// current selection).
+	TeXDocumentWindow::openDocument(QFileInfo(curDir, destStart.filename).canonicalFilePath(), true, true, destStart.line, curStart.position() - curStart.block().position(), curEnd.position() - curStart.block().position());
+}
+
+void PDFDocumentWindow::syncFromSource(const QString& sourceFile, int lineNo, int col, bool activatePreview)
+{
+	if(activatePreview)Research::rememberReadingPlace(TeXDocumentWindow::findDocument(sourceFile));
+	if (!Research::pdfCompiledPairValid(curFile)) { if (activatePreview) researchSyncAllowed(); return; }
+	const auto synchronizer = _synchronizer;
+	if (_syncInProgress || !synchronizer || !synchronizer->isValid())
+		return;
+	QScopedValueRollback<bool> syncing(_syncInProgress, true);
+
+	Tw::Settings settings;
+	TWSynchronizer::Resolution res{TWSynchronizer::kDefault_Resolution_ToPDF};
+	switch (settings.value(QString::fromLatin1("syncResolutionToPDF"), TWSynchronizer::kDefault_Resolution_ToPDF).toInt()) {
+		case 0:
+			res = TWSynchronizer::CharacterResolution;
+			break;
+		case 1:
+			res = TWSynchronizer::WordResolution;
+			break;
+		case 2:
+			res = TWSynchronizer::LineResolution;
+			break;
+	}
+
+	TWSynchronizer::TeXSyncPoint src;
+	src.filename = sourceFile;
+	src.line = lineNo;
+	src.col = col;
+
+	// Get target point
+	const auto doc = pdfWidget->document().toStrongRef();
+	TWSynchronizer::PDFSyncPoint dest = synchronizer->syncFromTeX(src, res);
+
+	// Check target point
+	if (!doc || synchronizer != _synchronizer || doc != pdfWidget->document().toStrongRef() ||
+		dest.page < 1 || dest.page > doc->numPages() || dest.rects.isEmpty() || QFileInfo(curFile) != QFileInfo(dest.filename))
+		return;
+
+	// Display the result
+	const qreal readingX = pdfWidget->mapToScene(pdfWidget->viewport()->rect().center()).x();
+	pdfWidget->goToPage(dest.page - 1);
+	QPainterPath path;
+	path.setFillRule(Qt::WindingFill);
+	foreach(QRectF r, dest.rects)
+		path.addRect(r);
+
+	clearSyncHighlight();
+	_syncHighlight = pdfWidget->addHighlightPath(dest.page - 1, path, QColor(255, 255, 0, 63));
+	if (!_syncHighlight)
+		return;
+
+	// Ensure that the synhronization point is displayed (in the center)
+	const QRectF target = _syncHighlight->mapRectToScene(_syncHighlight->boundingRect());
+	pdfWidget->centerOn(QPointF(readingX, target.center().y()));
+	const QRectF visible = pdfWidget->mapToScene(pdfWidget->viewport()->rect()).boundingRect();
+	if (target.right() < visible.left() || target.left() > visible.right())
+		pdfWidget->centerOn(target.center());
+
+	// Start the highlight removal timer (if applicable)
+	if (kPDFHighlightDuration > 0)
+		_syncHighlightRemover.start(kPDFHighlightDuration);
+
+	// Update the view (and possibly bring it to the front)
+	pdfWidget->update();
+	if (activatePreview)
+		selectWindow();
+}
+
+void PDFDocumentWindow::invalidateSyncHighlight()
+{
+	// This slot should be called when the graphics item pointed to by
+	// _syncHighlight goes out of scope (e.g., because the PDF changed, all pages
+	// were deleted, and, in the process, all subordinate graphics items as well).
+	_syncHighlight = nullptr;
+	_syncHighlightRemover.stop();
+}
+
+void PDFDocumentWindow::clearSyncHighlight()
+{
+	if (_syncHighlight) {
+		delete _syncHighlight;
+		_syncHighlight = nullptr;
+	}
+	_syncHighlightRemover.stop();
+}
+
+void PDFDocumentWindow::clearSearchResultHighlight()
+{
+	if (!widget())
+		return;
+	widget()->setCurrentSearchResultHighlightBrush(QBrush(Qt::transparent));
+}
+
+void PDFDocumentWindow::copySelectedTextToClipboard()
+{
+	if (!widget()) return;
+	QString textToCopy = widget()->selectedText();
+	if (textToCopy.isEmpty())
+		return;
+	Q_ASSERT(QApplication::clipboard());
+	QApplication::clipboard()->setText(textToCopy);
+}
+
+void PDFDocumentWindow::maybeEnableCopyCommand(const bool isTextSelected)
+{
+  Q_ASSERT(actionCopy);
+  if (!widget())
+	return;
+  QSharedPointer<QtPDF::Backend::Document> doc = widget()->document().toStrongRef();
+  if (!doc)
+	actionCopy->setEnabled(false);
+  else
+	actionCopy->setEnabled(isTextSelected && doc->permissions().testFlag(QtPDF::Backend::Document::Permission_Extract));
+}
+
+void PDFDocumentWindow::setCurrentFile(const QString &fileName)
+{
+	curFile = QFileInfo(fileName).canonicalFilePath();
+	//: Format for the window title (ex. "file.pdf[*] - TeXworks")
+	setWindowTitle(tr("%1[*] - %2").arg(Tw::Utils::WindowManager::strippedName(curFile), QApplication::applicationDisplayName()));
+	TWApp::instance()->updateWindowMenus();
+}
+
+PDFDocumentWindow *PDFDocumentWindow::findDocument(const QString &fileName)
+{
+	QString canonicalFilePath = QFileInfo(fileName).canonicalFilePath();
+
+	foreach (QWidget *widget, qApp->topLevelWidgets()) {
+		PDFDocumentWindow *theDoc = qobject_cast<PDFDocumentWindow*>(widget);
+		if (theDoc && theDoc->curFile == canonicalFilePath)
+			return theDoc;
+	}
+	return nullptr;
+}
+
+void PDFDocumentWindow::showPage(size_type page)
+{
+	pageLabel->setText(tr("page %1 of %2").arg(page).arg(pdfWidget->lastPage()));
+	if(researchPageField){QSignalBlocker block(researchPageField);researchPageField->setMaximum(qMax(1,int(pdfWidget->lastPage())));researchPageTotal->setText(QStringLiteral("/ %1").arg(pdfWidget->lastPage()));if(!researchPageField->hasFocus())researchPageField->setValue(int(page));updateResearchPdfFieldWidths();}
+}
+
+void PDFDocumentWindow::showScale(qreal scale)
+{
+	setProperty("researchPdfFitMode",-1);
+	scaleLabel->setText(tr("%1%").arg(ROUND(scale * 10000.0) / 100.0));
+	if(researchZoomField&&!researchZoomField->hasFocus()){QSignalBlocker block(researchZoomField);researchZoomField->setValue(scale*100);updateResearchPdfFieldWidths();}
+}
+
+void PDFDocumentWindow::updateResearchPdfFieldWidths()
+{
+	if(!researchPageField||!researchZoomField||!researchPageTotal)return;
+	researchPageField->ensurePolished();researchZoomField->ensurePolished();
+	const QFontMetrics pageMetrics(researchPageField->font());
+	int digitWidth=0;for(QChar digit:QStringLiteral("0123456789"))digitWidth=qMax(digitWidth,pageMetrics.horizontalAdvance(digit));
+	const int digits=qMax(2,int(QString::number(researchPageField->maximum()).size()));
+	researchPageField->setFixedWidth(qMax(32,digits*digitWidth+14));
+	researchZoomField->setFixedWidth(qMax(76,QFontMetrics(researchZoomField->font()).horizontalAdvance(researchZoomField->text())+14));
+	researchPageTotal->setAccessibleName(Research::englishUi()?QStringLiteral("Total pages"):Research::ui(QStringLiteral("总页数")));
+}
+
+void PDFDocumentWindow::retypeset()
+{
+	TeXDocumentWindow * src = getFirstTeXDocumentWindow(true);
+	if (src != nullptr) {
+		src->typeset();
+	}
+}
+
+void PDFDocumentWindow::interrupt()
+{
+	Q_FOREACH(TeXDocumentWindow * win, sourceDocList) {
+		if (win->isTypesetting()) {
+			win->interrupt();
+		}
+	}
+}
+
+void PDFDocumentWindow::goToSource()
+{
+    Research::rememberReadingPlace(this);
+	if (sourceDocList.count() > 0)
+		sourceDocList.first()->selectWindow();
+	else
+		// should not occur, the action is supposed to be disabled
+		actionGo_to_Source->setEnabled(false);
+}
+
+void PDFDocumentWindow::changedDocument(const QWeakPointer<QtPDF::Backend::Document> & newDoc) {
+	Q_UNUSED(newDoc)
+	updateStatusBar();
+	invalidateSyncHighlight();
+	enablePageActions(pdfWidget->currentPage());
+}
+
+void PDFDocumentWindow::enablePageActions(size_type pageIndex)
+{
+//#if !defined(Q_OS_DARWIN)
+// On Mac OS X, disabling these leads to a crash if we hit the end of document while auto-repeating a key
+// (seems like a Qt bug, but needs further investigation)
+// 2008-09-07: seems to no longer be a problem, probably thanks to Qt 4.4 update
+	actionFirst_Page->setEnabled(pageIndex > 0);
+	actionPrevious_Page->setEnabled(pageIndex > 0);
+	actionNext_Page->setEnabled(pageIndex < pdfWidget->lastPage() - 1);
+	actionLast_Page->setEnabled(pageIndex < pdfWidget->lastPage() - 1);
+//#endif
+}
+
+void PDFDocumentWindow::toggleFullScreen()
+{
+	Q_ASSERT(_fullScreenManager);
+	_fullScreenManager->toggleFullscreen();
+}
+
+void PDFDocumentWindow::setPageMode(const int newMode)
+{
+	if (!pdfWidget)
+		return;
+
+	switch (newMode) {
+		case QtPDF::PDFDocumentView::PageMode_SinglePage:
+		case QtPDF::PDFDocumentView::PageMode_OneColumnContinuous:
+		case QtPDF::PDFDocumentView::PageMode_TwoColumnContinuous:
+			pdfWidget->setPageMode(static_cast<QtPDF::PDFDocumentView::PageMode>(newMode));
+			break;
+		default:
+			return;
+	}
+}
+
+void PDFDocumentWindow::updatePageMode(const QtPDF::PDFDocumentView::PageMode newMode)
+{
+	// Mark proper menu item
+	actionPageMode_Single->setChecked(newMode == QtPDF::PDFDocumentView::PageMode_SinglePage);
+	actionPageMode_Continuous->setChecked(newMode== QtPDF::PDFDocumentView::PageMode_OneColumnContinuous);
+	actionPageMode_TwoPagesContinuous->setChecked(newMode == QtPDF::PDFDocumentView::PageMode_TwoColumnContinuous);
+}
+
+void PDFDocumentWindow::resetMagnifier()
+{
+	Q_ASSERT(pdfWidget);
+	Tw::Settings settings;
+
+	if (settings.value(QString::fromLatin1("circularMagnifier"), kDefault_CircularMagnifier).toBool())
+		pdfWidget->setMagnifierShape(QtPDF::DocumentTool::MagnifyingGlass::Magnifier_Circle);
+	else
+		pdfWidget->setMagnifierShape(QtPDF::DocumentTool::MagnifyingGlass::Magnifier_Rectangle);
+
+	pdfWidget->setMagnifierSize(magSizes[qBound(0, settings.value(QString::fromLatin1("magnifierSize"), kDefault_MagnifierSize).toInt() - 1, 2)]);
+}
+
+void PDFDocumentWindow::setResolution(const double res)
+{
+	Q_ASSERT(pdfWidget);
+	if (res > 0)
+		pdfWidget->setResolution(res);
+}
+
+void PDFDocumentWindow::enableTypesetAction(bool enabled)
+{
+	actionTypeset->setEnabled(enabled);
+}
+
+void PDFDocumentWindow::updateTypesettingAction()
+{
+	const bool isSourceTypesetting = [&]() {
+		Q_FOREACH(TeXDocumentWindow * const win, sourceDocList) {
+			if (win->isTypesetting()) {
+				return true;
+			}
+		}
+		return false;
+	}();
+	const bool canTypeset = [&]() {
+		return !getMainSourceFilename().isEmpty();
+	}();
+
+
+	disconnect(actionTypeset, &QAction::triggered, this, nullptr);
+	if (isSourceTypesetting) {
+		actionTypeset->setIcon(QIcon::fromTheme(QStringLiteral("process-stop")));
+		actionTypeset->setText(tr("Stop Compile"));
+		connect(actionTypeset, &QAction::triggered, this, &PDFDocumentWindow::interrupt);
+		enableTypesetAction(true);
+	}
+	else {
+		actionTypeset->setIcon(QIcon::fromTheme(QStringLiteral("process-start")));
+		actionTypeset->setText(tr("Compile"));
+		connect(actionTypeset, &QAction::triggered, this, &PDFDocumentWindow::retypeset);
+		enableTypesetAction(canTypeset);
+	}
+	if (auto *button = qobject_cast<QToolButton *>(toolBar->widgetForAction(actionTypeset))) {
+		button->setText(isSourceTypesetting ? Research::ui(QStringLiteral("停止")) : Research::ui(QStringLiteral("编译")));
+		Research::refreshCompileButton(button);
+	}
+}
+
+void PDFDocumentWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+	// Only accept files for now
+	event->ignore();
+	if (event->mimeData()->hasUrls()) {
+		const QList<QUrl> urls = event->mimeData()->urls();
+		foreach (const QUrl& url, urls) {
+			if (url.scheme() == QLatin1String("file")) {
+				event->acceptProposedAction();
+				break;
+			}
+		}
+	}
+}
+
+void PDFDocumentWindow::dropEvent(QDropEvent *event)
+{
+	event->ignore();
+	if (event->mimeData()->hasUrls()) {
+		const QList<QUrl> urls = event->mimeData()->urls();
+		foreach (const QUrl& url, urls)
+			if (url.scheme() == QLatin1String("file"))
+				TWApp::instance()->openFile(url.toLocalFile());
+		event->acceptProposedAction();
+	}
+}
+
+void PDFDocumentWindow::contextMenuEvent(QContextMenuEvent *event)
+{
+	Q_ASSERT(pdfWidget);
+
+	// If initiated with the mouse, only show the context menu if the user
+	// clicked inside the pdfWidget area
+	if (event->reason() == QContextMenuEvent::Mouse && !pdfWidget->rect().contains(pdfWidget->mapFrom(this, event->pos()))) {
+		TWScriptableWindow::contextMenuEvent(event);
+		return;
+	}
+
+	QMenu menu(this);
+
+	// Disarm the active tool (if any) as the menu will be highjacking all
+	// events. This will, e.g., close an open magnifier view, which would
+	// otherwise not receive a proper mouseReleaseEvent
+	pdfWidget->disarmTool();
+
+	if (_synchronizer && _synchronizer->isValid()) {
+		QAction *act = new QAction(tr("Jump to Source"), &menu);
+		act->setData(QVariant(event->pos()));
+		connect(act, &QAction::triggered, this, &PDFDocumentWindow::jumpToSource);
+		menu.addAction(act);
+		menu.addSeparator();
+	}
+
+	menu.addAction(actionZoom_In);
+	menu.addAction(actionZoom_Out);
+	menu.addAction(actionActual_Size);
+	menu.addAction(actionFit_to_Width);
+	menu.addAction(actionFit_to_Window);
+	menu.addAction(actionFit_to_Content_Width);
+
+	menu.exec(event->globalPos());
+}
+
+void PDFDocumentWindow::mouseMoveEvent(QMouseEvent *event)
+{
+	if (_fullScreenManager) _fullScreenManager->mouseMoveEvent(event);
+}
+
+void PDFDocumentWindow::jumpToSource()
+{
+	QAction *act = qobject_cast<QAction*>(sender());
+	if (!act || !pdfWidget)
+		return;
+
+	QPoint eventPos = act->data().toPoint();
+	QPointF scenePos = pdfWidget->mapToScene(pdfWidget->mapFrom(this, eventPos));
+
+	// Map to scene, then map to page
+	QtPDF::PDFDocumentScene * scene = qobject_cast<QtPDF::PDFDocumentScene*>(pdfWidget->scene());
+	if (!scene)
+		return;
+	QtPDF::PDFPageGraphicsItem * page = dynamic_cast<QtPDF::PDFPageGraphicsItem*>(scene->pageAt(scenePos));
+	if (!page)
+		return;
+
+	syncClick(scene->pageNumFor(page), page->mapToPage(page->mapFromScene(scenePos)));
+}
+
+void PDFDocumentWindow::doFindDialog()
+{
+	if (PDFFindDialog::doFindDialog(this) == QDialog::Accepted)
+		doFindAgain(true);
+}
+
+void PDFDocumentWindow::doFindAgain(bool newSearch /* = false */)
+{
+	Q_UNUSED(newSearch)
+	Tw::Settings settings;
+
+	QString	searchText = settings.value(QString::fromLatin1("searchText")).toString();
+	if (searchText.isEmpty())
+		return;
+
+	QtPDF::Backend::SearchFlags searchFlags;
+	QTextDocument::FindFlags flags = static_cast<QTextDocument::FindFlags>(settings.value(QString::fromLatin1("searchFlags")).toInt());
+
+	if ((flags & QTextDocument::FindCaseSensitively) == 0)
+		searchFlags |= QtPDF::Backend::Search_CaseInsensitive;
+	if ((flags & QTextDocument::FindBackward) != 0)
+		searchFlags |= QtPDF::Backend::Search_Backwards;
+
+	widget()->search(searchText, searchFlags);
+}
+
+void PDFDocumentWindow::searchResultHighlighted(const size_type pageNum, const QList<QPolygonF> & pdfRegion)
+{
+	Tw::Settings settings;
+
+	widget()->setCurrentSearchResultHighlightBrush(_searchResultHighlightBrush);
+	if (kPDFHighlightDuration > 0)
+		_searchResultHighlightRemover.start(kPDFHighlightDuration);
+
+	if (hasSyncData() && settings.value(QString::fromLatin1("searchPdfSync")).toBool() && !pdfRegion.isEmpty()) {
+		// In order to properly synchronize the search result, we first obtain
+		// the bounding boxes of the first and last matched characters and then
+		// use those for synchronization
+
+		QSharedPointer<QtPDF::Backend::Document> doc = widget()->document().toStrongRef();
+		Q_ASSERT(doc);
+		QSharedPointer<QtPDF::Backend::Page> page = doc->page(pageNum);
+		Q_ASSERT(page);
+		QtPDF::Backend::Page::BoxBoundaryList charBoxes;
+
+		// NOTE: pdfRegion is in PDF coordinates (i.e., (0,0) is in the lower
+		// left), whereas QtPDF::Backend::Page::selectedText() expects TeX
+		// coordinates (i.e., (0,0) in the upper left). Hence we need to convert
+		// the coordinates
+		QList<QPolygonF> region;
+		foreach (const QPolygonF & pdfPolygon, pdfRegion) {
+			QPolygonF polygon;
+			foreach (const QPointF & p, pdfPolygon) {
+				polygon << QPointF(p.x(), page->pageSizeF().height() - p.y());
+			}
+			region << polygon;
+		}
+
+		// Obtain the chracter bounding boxes of the search result
+		page->selectedText(region, nullptr, &charBoxes, true);
+		Q_ASSERT(!charBoxes.empty());
+
+		// Obtain the centers of the first and last character bounding boxes and
+		// convert them to PDF coordinates (i.e., (0,0) in the lower left) as
+		// required by syncRange()
+		QPointF pt1 = charBoxes.first().center();
+		QPointF pt2 = charBoxes.last().center();
+		pt1.ry() = page->pageSizeF().height() - pt1.y();
+		pt2.ry() = page->pageSizeF().height() - pt2.y();
+
+		// Perform the synchronization
+		syncRange(pageNum, pt1, pt2, TWSynchronizer::CharacterResolution);
+	}
+}
+
+void PDFDocumentWindow::setDefaultScale() {
+	// A named place or Back has already restored the user's explicit view.
+	if(property("researchRestoredReadingPosition").toBool())return;
+	Tw::Settings settings;
+	switch (settings.value(QString::fromLatin1("scaleOption"), kDefault_PreviewScaleOption).toInt()) {
+		case 2:
+			pdfWidget->zoomFitWidth();
+			updateResearchFitIcon(1);
+			break;
+		case 3:
+			pdfWidget->zoomFitWindow();
+			updateResearchFitIcon(0);
+			break;
+		case 4:
+		    pdfWidget->setZoomLevel(settings.value(QString::fromLatin1("previewScale"), kDefault_PreviewScale).toFloat() / 100.);
+			break;
+		case 5:
+			pdfWidget->zoomFitContentWidth();
+			updateResearchFitIcon(2);
+			break;
+		default:
+			pdfWidget->zoom100();
+			break;
+	}
+}
+
+void PDFDocumentWindow::maybeOpenUrl(const QUrl & url)
+{
+	// Opening URLs could be a security risk, so ask the user (but make "yes,
+	// proceed the default option - after all the user typically clicked on the
+	// link deliberately)
+	if (QMessageBox::question(this, tr("Open URL"), tr("You are in the process of opening the URL %1. Opening unknown or untrusted web addresses can be a security risk.\nDo you want to continue?").arg(url.toString()),
+	                          QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
+		QDesktopServices::openUrl(url);
+}
+
+void PDFDocumentWindow::maybeOpenPdf(const QString & filename, const QtPDF::PDFDestination & destination, const bool newWindow)
+{
+	Q_UNUSED(newWindow)
+	// Unlike in maybeOpenUrl, this function only works on local PDF files which
+	// we assume are safe.
+	// TODO: We currently ignore the value of newWindow and always open a new
+	// window. This avoids the need to update/invalidate all pointers to this
+	// PDFDocument (e.g., in the TeXDocument associated with it) to notify the
+	// other parts of the code that a completely new and unrelated document is
+	// loaded here now.
+	// NB: TWApp::openFile() requires an absolute filename. Therefore, we have
+	// to make it absolute (using the current file's folder as base) if it isn't
+	// already
+	PDFDocumentWindow * pdf = qobject_cast<PDFDocumentWindow*>(TWApp::instance()->openFile([this] (const QString & filename) {
+			const QFileInfo fi(filename);
+			if (fi.isAbsolute()) {
+				return filename;
+			}
+			return QFileInfo(this->fileName()).dir().filePath(filename);
+		}(filename)
+	));
+	if (!pdf || !pdf->widget())
+		return;
+	pdf->widget()->goToPDFDestination(destination, false);
+}
+
+
+void PDFDocumentWindow::print()
+{
+	// Currently, printing is not supported in a reliable, cross-platform way
+	// Instead, offer to open the document in the system's default viewer
+
+	QString msg = tr("Unfortunately, this version of %1 is unable to print PDF documents due to various technical reasons.\n").arg(QApplication::applicationDisplayName());
+	msg += tr("Do you want to open the file in the default viewer for printing instead?");
+	msg += tr(" (remember to close it again to avoid access problems)");
+
+	if(QMessageBox::information(this,
+		tr("Print PDF..."), msg,
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes
+	) {
+		QDesktopServices::openUrl(QUrl::fromLocalFile(Research::annotationDisplayedFile(this)));
+	}
+}
+
+void PDFDocumentWindow::showScaleContextMenu(const QPoint pos)
+{
+	if (!scaleContextMenu) {
+		scaleContextMenu = new QMenu(this);
+		QSignalMapper * contextMenuMapper = new QSignalMapper(scaleContextMenu);
+		QAction * a{nullptr};
+
+		scaleContextMenu->addAction(actionFit_to_Width);
+		scaleContextMenu->addAction(actionFit_to_Window);
+		scaleContextMenu->addAction(actionFit_to_Content_Width);
+		scaleContextMenu->addSeparator();
+
+		a = scaleContextMenu->addAction(tr("Custom..."));
+		connect(a, &QAction::triggered, this, &PDFDocumentWindow::doScaleDialog);
+
+		a = scaleContextMenu->addAction(tr("200%"));
+		connect(a, &QAction::triggered, contextMenuMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+		contextMenuMapper->setMapping(a, QString::fromLatin1("2"));
+		a = scaleContextMenu->addAction(tr("150%"));
+		connect(a, &QAction::triggered, contextMenuMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+		contextMenuMapper->setMapping(a, QString::fromLatin1("1.5"));
+		// "100%" corresponds to "Actual Size", but we keep the numeric value
+		// here for consistency
+		a = scaleContextMenu->addAction(tr("100%"));
+		a->setShortcut(actionActual_Size->shortcut());
+		connect(a, &QAction::triggered, contextMenuMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+		contextMenuMapper->setMapping(a, QString::fromLatin1("1"));
+		a = scaleContextMenu->addAction(tr("75%"));
+		connect(a, &QAction::triggered, contextMenuMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+		contextMenuMapper->setMapping(a, QString::fromLatin1(".75"));
+		a = scaleContextMenu->addAction(tr("50%"));
+		connect(a, &QAction::triggered, contextMenuMapper, static_cast<void (QSignalMapper::*)()>(&QSignalMapper::map));
+		contextMenuMapper->setMapping(a, QString::fromLatin1(".5"));
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+		connect(contextMenuMapper, static_cast<void (QSignalMapper::*)(const QString&)>(&QSignalMapper::mapped), this, &PDFDocumentWindow::setScaleFromContextMenu);
+#else
+		connect(contextMenuMapper, &QSignalMapper::mappedString, this, &PDFDocumentWindow::setScaleFromContextMenu);
+#endif
+	}
+
+	scaleContextMenu->popup(scaleLabel->mapToGlobal(pos));
+}
+
+void PDFDocumentWindow::setScaleFromContextMenu(const QString & strZoom)
+{
+	bool conversionOK = false;
+	float zoom = strZoom.toFloat(&conversionOK);
+	// FIXME: This should actually use the point the context menu was opened at as
+	// anchor for zooming. Currently, arbitrary coordinates are not supported yet
+	// (and using QGraphicsView::AnchorUnderMouse would use the position of the
+	// mouse cursor when the user clicks on the respective menu item - which will
+	// be somewhere else
+	if (pdfWidget && conversionOK)
+		pdfWidget->setZoomLevel(zoom);
+}
+
+void PDFDocumentWindow::updateStatusBar()
+{
+	Q_ASSERT(pdfWidget);
+	showPage(pdfWidget->currentPage() + 1);
+	showScale(pdfWidget->zoomLevel());
+}
+
+void PDFDocumentWindow::setMouseMode(const int newMode)
+{
+	Q_ASSERT(pdfWidget);
+	pdfWidget->setMouseMode(static_cast<QtPDF::PDFDocumentView::MouseMode>(newMode));
+}
+
+void PDFDocumentWindow::doPageDialog()
+{
+	statusBar()->show();researchPageField->setFocus();researchPageField->selectAll();
+}
+
+void PDFDocumentWindow::doScaleDialog()
+{
+	statusBar()->show();researchZoomField->setFocus();researchZoomField->selectAll();
+}

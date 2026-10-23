@@ -1,0 +1,212 @@
+{
+  "source": "Actual TeXline Windows widgets, inactive desktop",
+  "input": "Scripted widget events and target indicator; not human usability testing",
+  "timing": "Measured capture boundaries rounded to 10 ms; no acceleration",
+  "candidateSha256": "28b98d809c2f07c1a6eb5db8b033af9353b67f357f21ab9a83411b8df8dd82a4",
+  "clips": [
+    {
+      "file": "start-zh.gif",
+      "bytes": 411961,
+      "sha256": "e1ddc7eae0f3614168d45441e1f067767def38ce0d7beb745f4003d5f735f104",
+      "frames": 53,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 14220,
+      "rawDurationMs": 13471,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 33
+        }
+      ]
+    },
+    {
+      "file": "start-en.gif",
+      "bytes": 431681,
+      "sha256": "1e3c395c62e9bbfc789d384575a32ce23950bc4263e14621f797c4a9ebff5932",
+      "frames": 52,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 14150,
+      "rawDurationMs": 13401,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 13
+        }
+      ]
+    },
+    {
+      "file": "citation-zh.gif",
+      "bytes": 341507,
+      "sha256": "f796447ed404e52dfa5c31317e8fcf79709cb36e95d4b29135ca7e272a9cb671",
+      "frames": 51,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 9780,
+      "rawDurationMs": 9027,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 4
+        }
+      ]
+    },
+    {
+      "file": "citation-en.gif",
+      "bytes": 364163,
+      "sha256": "f187c3c24d0853590cf968f318fa94b8d494df2086eba5da241369f9c2d9129a",
+      "frames": 52,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 9730,
+      "rawDurationMs": 8979,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 4
+        }
+      ]
+    },
+    {
+      "file": "reference-zh.gif",
+      "bytes": 562594,
+      "sha256": "86a64091c43434f4103027199b37f50a084e6f16bd35f159c24dab0b8918fdc8",
+      "frames": 37,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 8900,
+      "rawDurationMs": 8151,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 4
+        }
+      ]
+    },
+    {
+      "file": "reference-en.gif",
+      "bytes": 606086,
+      "sha256": "5308e0bce343ecb2893f654aa3cb9c589799adf1e03450403c78d90bf2f3c341",
+      "frames": 39,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 8900,
+      "rawDurationMs": 8155,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 4
+        }
+      ]
+    },
+    {
+      "file": "versions-zh.gif",
+      "bytes": 620319,
+      "sha256": "8d77a552fa2dac99c0a81779eb26d85a59487b86801672150cbf91ddd0361196",
+      "frames": 68,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 12950,
+      "rawDurationMs": 12201,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 4
+        }
+      ]
+    },
+    {
+      "file": "versions-en.gif",
+      "bytes": 580048,
+      "sha256": "ac6e9ee997024879a4ec92c54827d0c6c039654216a6a1f40a4e707e215666b0",
+      "frames": 68,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 12950,
+      "rawDurationMs": 12202,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 3
+        }
+      ]
+    },
+    {
+      "file": "places-zh.gif",
+      "bytes": 620850,
+      "sha256": "55e73afa26bc936839235e40a6e14c86a53fd66e34648e42d4f2867f7b3c5bb8",
+      "frames": 62,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 12890,
+      "rawDurationMs": 12138,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 7
+        }
+      ]
+    },
+    {
+      "file": "places-en.gif",
+      "bytes": 635891,
+      "sha256": "bfafd6fa592c6849676cb7b2c0d653547d857dd07cd2de60ba90d561eb1a8159",
+      "frames": 62,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 12840,
+      "rawDurationMs": 12095,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 5
+        }
+      ]
+    },
+    {
+      "file": "slides-zh.gif",
+      "bytes": 272661,
+      "sha256": "329e369cb3fbed28dd8edbdd3fb71c6eb95e3460ca9df0e59697164cef2004d5",
+      "frames": 42,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 8620,
+      "rawDurationMs": 7867,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 4
+        }
+      ]
+    },
+    {
+      "file": "slides-en.gif",
+      "bytes": 273801,
+      "sha256": "f65d41da8e5e62e48973a0ba7ff146ee2b3bb1cef1728f16a1824b2f42e16d0b",
+      "frames": 44,
+      "width": 1067,
+      "height": 660,
+      "durationMs": 8640,
+      "rawDurationMs": 7888,
+      "endHoldMs": 750,
+      "actions": [
+        {
+          "action": "Begin with the actual current application window",
+          "atMs": 3
+        }
+      ]
+    }
+  ]
+}

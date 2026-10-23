@@ -1,0 +1,26 @@
+% !TEX TS-program = pdflatex
+% Minimal mathematics paper with standard TeX-distribution fonts.
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=28mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,graphicx,booktabs}
+\usepackage[hidelinks]{hyperref}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\title{A research note}
+\author{Your name}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+State the problem, the main result, and its interpretation.
+\end{abstract}
+\section{Introduction}
+Describe the question and the contribution.
+\section{Main result}
+\begin{theorem}
+State assumptions explicitly before the conclusion.
+\end{theorem}
+\begin{proof}
+Give the argument and identify its dependencies.
+\end{proof}
+\end{document}

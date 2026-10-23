@@ -1,0 +1,27 @@
+% !TeX program = pdflatex
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=28mm]{geometry}
+\title{Free decay of a damped oscillator}
+\author{}\date{}
+\begin{document}
+\maketitle
+\section{Equation of motion}
+A mass $m$ on a spring of stiffness $k$ with viscous damping $c$
+obeys $m\ddot x+c\dot x+kx=0$.
+Assume $m>0$, $k>0$, and $c\geq0$.
+Set $\gamma=c/(2m)$ and $\omega_0=\sqrt{k/m}$.
+\section{Underdamped response}
+For $0\leq\gamma<\omega_0$, let
+$\omega_d=\sqrt{\omega_0^2-\gamma^2}$.
+\begin{equation}\label{eq:solution}
+ x(t)=A e^{-\gamma t}\cos(\omega_d t+\phi).
+\end{equation}
+Equation~\eqref{eq:solution} separates the decaying amplitude
+from the oscillation frequency.
+\section{Energy balance}
+With $\mathcal E=m\dot x^2/2+kx^2/2$, direct differentiation gives
+\[\frac{d\mathcal E}{dt}=-c\dot x^2\leq0.\]
+The mechanical energy is therefore nonincreasing.
+In the absence of damping, the same calculation recovers energy conservation.
+\end{document}

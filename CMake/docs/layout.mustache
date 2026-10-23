@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>[TeXworks] {{ file }}</title>
+  <!-- In the future, this needs to be replaced with something that comes from the official TeXworks repository, but we currently have no good alternative to https://sharpie.github.io/TeXworks/resources/docs.css, thus keep it. -->
+  <link rel="stylesheet" type="text/css" href="https://sharpie.github.io/TeXworks/resources/docs.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+
+  <!-- Navbar -->
+  <div id="fadeout"></div>
+  <div id="flybar">
+    <a id="title" href="#top"><h1>{{ file }}</h1></a>
+
+    <div class="navigation about">
+      <div class="button">
+        About
+      </div>
+      <div class="contents">
+        <p>This documentation was built using Ryan Tomayko's <strong>Rocco</strong> tool:</p>
+        <a href="https://rtomayko.github.io/rocco/">rtomayko.github.io/rocco/</a>
+
+        <p>Which is based on <strong>Docco</strong> by Jeremy Ashkenas:</p>
+        <a href="https://ashkenas.com/docco/">ashkenas.com/docco/</a>
+
+        <p>The code from this navigation bar was borrowed from the <strong>CoffeeScript</strong> project, also by Jeremy:</p>
+        <a href="https://coffeescript.org/">coffeescript.org</a>
+
+        <p>The templates used to create this page may be found on GitHub:</p>
+        <a href="https://github.com/TeXworks/texworks/tree/master/CMake/docs">github.com/TeXworks/texworks</a>
+
+      </div>
+    </div>
+
+    {{#sources?}}
+    <div class="navigation toc">
+      <div class="button">
+        Browse Source
+      </div>
+      <div class="contents menu">
+        {{#sources}}
+          <a class="source" href="{{ url }}">{{ path }}</a>
+        {{/sources}}
+      </div>
+    </div>
+    {{/sources?}}
+    <div id="error" style="display:none;"></div>
+  </div>
+
+  <!-- Content -->
+  <span class="bookmark" id="top"></span>
+
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>{{ file }}</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#sections}}
+    <tr>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-{{ section_id }}">&#182;</a>
+          <span class="bookmark" id="section-{{ section_id }}"></span>
+        </div>
+        {{{ docs }}}
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>{{{ code }}}</pre></div>
+      </td>
+    </tr>
+    {{/sections}}
+  </table>
+</div>
+
+  <!-- Navbar Scripting -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+  <script type="text/javascript">
+    var closeMenus;
+    closeMenus = function() {
+      return $('.navigation.active').removeClass('active');
+    };
+    $('.navigation').click(function(e) {
+      if (e.target.tagName.toLowerCase() === 'a') {
+        return;
+      }
+      if ($(e.target).closest('.repl_wrapper').length) {
+        return false;
+      }
+      if ($(this).hasClass('active')) {
+        closeMenus();
+      } else {
+        closeMenus();
+        $(this).addClass('active');
+      }
+      return false;
+    });
+  </script>
+
+</body>
+</html>

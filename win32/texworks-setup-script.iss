@@ -1,0 +1,142 @@
+﻿; UTF-8 script for Inno Setup Unicode
+
+; Definitions using Inno Setup Preprocessor
+#define APPNAME      GetStringFileInfo("..\release/TeXworks.exe", PRODUCT_NAME)
+#define APPVERSION   GetStringFileInfo("..\release/TeXworks.exe", PRODUCT_VERSION)
+#define APPPUBLISHER GetStringFileInfo("..\release/TeXworks.exe", COMPANY_NAME)
+#define APPCOPYRIGHT GetStringFileInfo("..\release/TeXworks.exe", LEGAL_COPYRIGHT)
+#define VERSIONINFO  GetVersionNumbersString("..\release/TeXworks.exe")
+
+[Setup]
+; NOTE: The value of AppId uniquely identifies this application.
+; Do not use the same AppId value in installers for other applications.
+; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
+AppId={{41DA4817-4D2A-4D83-AD02-6A2D95DC8DCB}
+AppName={#APPNAME}
+AppVersion={#APPVERSION}
+AppPublisher={#APPPUBLISHER}
+AppPublisherURL=https://tug.org/texworks/
+AppSupportURL=https://tug.org/texworks/
+AppUpdatesURL=https://tug.org/texworks/
+AppCopyright={#APPCOPYRIGHT}
+DefaultDirName={autopf}\{#APPNAME}
+DefaultGroupName={#APPNAME}
+AllowNoIcons=yes
+LicenseFile=..\COPYING
+OutputBaseFilename={#APPNAME}-setup-v{#VERSIONINFO}
+SetupIconFile=..\res\images\TeXworks-setup.ico
+Compression=lzma
+SolidCompression=yes
+ChangesAssociations=yes
+VersionInfoVersion={#VERSIONINFO}
+WizardSmallImageFile=..\res\images\TeXworks-small.bmp
+UninstallDisplayName={#APPNAME}
+
+[Languages]
+Name: "ar"; MessagesFile: "compiler:Languages\Arabic.isl"
+Name: "ca"; MessagesFile: "compiler:Languages\Catalan.isl"
+Name: "cs"; MessagesFile: "compiler:Languages\Czech.isl"
+Name: "de"; MessagesFile: "compiler:Languages\German.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
+Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
+Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"
+Name: "ja"; MessagesFile: "compiler:Languages\Japanese.isl"
+Name: "ko"; MessagesFile: "compiler:Languages\Korean.isl"
+Name: "nl"; MessagesFile: "compiler:Languages\Dutch.isl"
+Name: "nn"; MessagesFile: "compiler:Languages\Norwegian.isl"
+Name: "pl"; MessagesFile: "compiler:Languages\Polish.isl"
+Name: "pt_BR"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
+Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
+Name: "sl"; MessagesFile: "compiler:Languages\Slovenian.isl"
+Name: "tr"; MessagesFile: "compiler:Languages\Turkish.isl"
+; additional Inno Setup languages using contributed translations
+Name: "af"; MessagesFile: "extra-setup-languages\Afrikaans.isl"
+Name: "fa"; MessagesFile: "extra-setup-languages\Farsi.isl"
+Name: "zh_cn"; MessagesFile: "extra-setup-languages\ChineseSimplified.isl"
+
+[CustomMessages]
+ManualNameEn=A short manual for TeXworks
+ManualNameFr=Petit manuel pour TeXworks
+ca.CreateFileAssoc=Obri els següents tipus de fitxers amb TeXworks per defecte:
+cs.CreateFileAssoc=Vždy otevírat následující typy souborů v TeXworks:
+de.CreateFileAssoc=Folgende Dateitypen standardmäßig mit TeXworks öffnen:
+en.CreateFileAssoc=Open the following file types with TeXworks by default:
+es.CreateFileAssoc=Abrir estos tipos de archivo con TeXworks como programa predeterminado:
+fr.CreateFileAssoc=Ouvrir par défaut les types de fichiers suivant avec TeXworks:
+it.CreateFileAssoc=Apri di default i seguenti tipi di file con TeXworks:
+nl.CreateFileAssoc=Open de volgende bestandstypen bij voorkeur met TeXworks:
+nn.CreateFileAssoc=Opna desse filtypane med TeXworks som standard:
+pl.CreateFileAssoc=Domyślnie otwieraj następujące typy plików za pomocą edytora TeXworks:
+pt_BR.CreateFileAssoc=
+ru.CreateFileAssoc=Открывать следующие файлы по умолчанию в TeXworks:
+sl.CreateFileAssoc=Uporabi TeXworks za odpiranje naslednjih vrst datotek:
+
+af.CreateFileAssoc=Maar die volgende lêer-tipes by verstek met TeXworks oop:
+ar.CreateFileAssoc=افتح أنواع الملفات التالية في TeXworks مبدئيا:
+fa.CreateFileAssoc=پرونده‌های از نوع زیر را به‌طور پیش‌فرض با تک‌ورکس بازکن:
+ja.CreateFileAssoc=常にTeXworksを使ってこれらの種類のファイルを開く:
+ko.CreateFileAssoc=다음 유형의 파일을 열 때 기본값으로 TeXworks를 이용합니다:
+tr.CreateFileAssoc=Aşağıdaki dosya türlerini öntanımlı olarak TeXworks ile aç:
+zh_cn.CreateFileAssoc=默认使用 TeXworks 打开下列文件类型：
+; Inno Setup doesn't support Faroese (yet)
+; fo.CreateFileAssoc=Lat altíð hesi sløgini av fílum upp við TeXworks:
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "texfileassoc"; Description: "{cm:AssocFileExtension,TeXworks,.tex}"; GroupDescription: "{cm:CreateFileAssoc}"
+Name: "ltxfileassoc"; Description: "{cm:AssocFileExtension,TeXworks,.ltx}"; GroupDescription: "{cm:CreateFileAssoc}"
+Name: "styfileassoc"; Description: "{cm:AssocFileExtension,TeXworks,.sty}"; GroupDescription: "{cm:CreateFileAssoc}"
+Name: "clsfileassoc"; Description: "{cm:AssocFileExtension,TeXworks,.cls}"; GroupDescription: "{cm:CreateFileAssoc}"
+Name: "dtxfileassoc"; Description: "{cm:AssocFileExtension,TeXworks,.dtx}"; GroupDescription: "{cm:CreateFileAssoc}"
+Name: "pdffileassoc"; Description: "{cm:AssocFileExtension,TeXworks,.pdf}"; GroupDescription: "{cm:CreateFileAssoc}"; Flags: unchecked
+
+[Files]
+Source: "..\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{group}\TeXworks"; Filename: "{app}\TeXworks.exe"
+Name: "{group}\{cm:ProgramOnTheWeb,TeXworks}"; Filename: "https://tug.org/texworks/"
+Name: "{group}\{cm:ManualNameEn}"; Filename: "{app}\texworks-help\TeXworks-manual\en\TeXworks-manual-en.pdf"
+Name: "{group}\{cm:ManualNameFr}"; Filename: "{app}\texworks-help\TeXworks-manual\fr\TeXworks-manual-fr.pdf"
+Name: "{commondesktop}\TeXworks"; Filename: "{app}\TeXworks.exe"; Tasks: desktopicon
+
+[Registry]
+Root: HKCR; Subkey: ".tex"; ValueType: string; ValueName: ""; ValueData: "TeXworksTeXFile"; Flags: uninsdeletevalue; Tasks: texfileassoc
+Root: HKCR; Subkey: ".tex"; ValueType: string; ValueName: "Content Type"; ValueData: "text/x-tex"; Flags: uninsdeletevalue; Tasks: texfileassoc
+Root: HKCR; Subkey: "TeXworksTeXFile"; ValueType: string; ValueName: ""; ValueData: "(La)TeX File"; Flags: uninsdeletekey; Tasks: texfileassoc
+Root: HKCR; Subkey: "TeXworksTeXFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\TeXworks.exe,1"; Tasks: texfileassoc
+Root: HKCR; Subkey: "TeXworksTeXFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TeXworks.exe"" ""%1"""; Tasks: texfileassoc
+
+Root: HKCR; Subkey: ".ltx"; ValueType: string; ValueName: ""; ValueData: "TeXworksTeXFile"; Flags: uninsdeletevalue; Tasks: ltxfileassoc
+Root: HKCR; Subkey: ".ltx"; ValueType: string; ValueName: "Content Type"; ValueData: "text/x-tex"; Flags: uninsdeletevalue; Tasks: ltxfileassoc
+Root: HKCR; Subkey: "TeXworksTeXFile"; ValueType: string; ValueName: ""; ValueData: "(La)TeX File"; Flags: uninsdeletekey; Tasks: ltxfileassoc
+Root: HKCR; Subkey: "TeXworksTeXFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\TeXworks.exe,1"; Tasks: ltxfileassoc
+Root: HKCR; Subkey: "TeXworksTeXFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TeXworks.exe"" ""%1"""; Tasks: ltxfileassoc
+
+Root: HKCR; Subkey: ".sty"; ValueType: string; ValueName: ""; ValueData: "TeXworksStyFile"; Flags: uninsdeletevalue; Tasks: styfileassoc
+Root: HKCR; Subkey: ".sty"; ValueType: string; ValueName: "Content Type"; ValueData: "text/x-tex"; Flags: uninsdeletevalue; Tasks: styfileassoc
+Root: HKCR; Subkey: "TeXworksStyFile"; ValueType: string; ValueName: ""; ValueData: "(La)TeX Style File"; Flags: uninsdeletekey; Tasks: styfileassoc
+Root: HKCR; Subkey: "TeXworksStyFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\TeXworks.exe,1"; Tasks: styfileassoc
+Root: HKCR; Subkey: "TeXworksStyFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TeXworks.exe"" ""%1"""; Tasks: styfileassoc
+
+Root: HKCR; Subkey: ".cls"; ValueType: string; ValueName: ""; ValueData: "TeXworksClsFile"; Flags: uninsdeletevalue; Tasks: clsfileassoc
+Root: HKCR; Subkey: ".cls"; ValueType: string; ValueName: "Content Type"; ValueData: "text/x-tex"; Flags: uninsdeletevalue; Tasks: clsfileassoc
+Root: HKCR; Subkey: "TeXworksClsFile"; ValueType: string; ValueName: ""; ValueData: "(La)TeX Class File"; Flags: uninsdeletekey; Tasks: clsfileassoc
+Root: HKCR; Subkey: "TeXworksClsFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\TeXworks.exe,1"; Tasks: clsfileassoc
+Root: HKCR; Subkey: "TeXworksClsFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TeXworks.exe"" ""%1"""; Tasks: clsfileassoc
+
+Root: HKCR; Subkey: ".dtx"; ValueType: string; ValueName: ""; ValueData: "TeXworksDtxFile"; Flags: uninsdeletevalue; Tasks: dtxfileassoc
+Root: HKCR; Subkey: ".dtx"; ValueType: string; ValueName: "Content Type"; ValueData: "text/x-tex"; Flags: uninsdeletevalue; Tasks: dtxfileassoc
+Root: HKCR; Subkey: "TeXworksDtxFile"; ValueType: string; ValueName: ""; ValueData: "Documented (La)TeX File"; Flags: uninsdeletekey; Tasks: dtxfileassoc
+Root: HKCR; Subkey: "TeXworksDtxFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\TeXworks.exe,1"; Tasks: dtxfileassoc
+Root: HKCR; Subkey: "TeXworksDtxFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TeXworks.exe"" ""%1"""; Tasks: dtxfileassoc
+
+Root: HKCR; Subkey: ".pdf"; ValueType: string; ValueName: ""; ValueData: "TeXworksPDFFile"; Flags: uninsdeletevalue; Tasks: pdffileassoc
+Root: HKCR; Subkey: ".pdf"; ValueType: string; ValueName: "Content Type"; ValueData: "application/pdf"; Flags: uninsdeletevalue; Tasks: pdffileassoc
+Root: HKCR; Subkey: "TeXworksPDFFile"; ValueType: string; ValueName: ""; ValueData: "Portable Document Format"; Flags: uninsdeletekey; Tasks: pdffileassoc
+Root: HKCR; Subkey: "TeXworksPDFFile\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\TeXworks.exe,1"; Tasks: pdffileassoc
+Root: HKCR; Subkey: "TeXworksPDFFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TeXworks.exe"" ""%1"""; Tasks: pdffileassoc
+
+[Run]
+Filename: "{app}\TeXworks.exe"; Description: "{cm:LaunchProgram,TeXworks}"; Flags: nowait postinstall skipifsilent

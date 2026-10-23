@@ -1,0 +1,31 @@
+# Files auto-generated during build.
+/TeXworks.plist
+
+# Build directories
+/build*/
+/modules/QtPDF/build*/
+
+# Files downloaded/extracted as part of OS X packaging task.
+/poppler-data-*.tar.gz
+/poppler-data-*/
+/TeXworks-manual-html-*.zip
+/TeXworks-manual-html-*/
+
+# Files created by Qt Creator
+CMakeLists.txt.user*
+
+# Files created by Inno Setup
+/win32/Output/
+
+# MacOS X files
+.DS_Store
+
+# CMake files
+CMakeUserPresets.json
+
+# TeXline local development and private validation
+/.local/
+/out/
+/outputs/
+__pycache__/
+*.py[cod]

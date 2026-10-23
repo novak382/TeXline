@@ -1,0 +1,27 @@
+% !TeX program = pdflatex
+\documentclass[11pt]{article}
+\usepackage{booktabs}
+\usepackage[margin=28mm]{geometry}
+\begin{document}
+\section{Morphology in the Palmer Archipelago}
+Public observations collected in 2007--2009 are summarized by species.
+Rows with missing body mass or flipper length are excluded ($n=342$).
+Mass is converted from grams to kilograms before averaging.
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Species & $n$ & Mass (kg) & Flipper (mm) \\
+\midrule
+Adelie & 151 & 3.70066 & 189.95 \\
+\midrule
+Chinstrap & 68 & 3.733 & 195.82 \\
+Gentoo & 123 & 5.076 & 217.19 \\
+\bottomrule
+\end{tabular}
+\caption{Group means calculated from the public Palmer penguins data.}
+\label{tab:morphology}
+\end{table}
+Data: Gorman and Palmer Station LTER, via palmerpenguins (CC0).
+Means are reported by species with the observed group sizes.
+\end{document}

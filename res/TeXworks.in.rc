@@ -1,0 +1,44 @@
+#include <windows.h>
+
+#include "@PROJECT_SOURCE_DIR@/src/TWVersion.h"
+#include "GitRev.h"
+
+IDI_ICON1	ICON	DISCARDABLE	"@PROJECT_SOURCE_DIR@/res/images/TeXworks.ico"
+IDI_ICON2	ICON	DISCARDABLE	"@PROJECT_SOURCE_DIR@/res/images/TeXworks-doc.ico"
+
+IDI_ICON3	ICON	DISCARDABLE	"@PROJECT_SOURCE_DIR@/res/images/TeXworks.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION    	VER_MAJOR,VER_MINOR,VER_BUGFIX,0
+PRODUCTVERSION 	VER_MAJOR,VER_MINOR,VER_BUGFIX,0
+FILEFLAGSMASK  	0
+FILEOS         	VOS__WINDOWS32
+FILETYPE       	VFT_APP
+FILESUBTYPE    	0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName",      "TeXline contributors"
+            VALUE "FileDescription",  "TeXline editor & previewer"
+            VALUE "FileVersion",      TEXWORKS_VERSION
+            VALUE "InternalName",     "TeXline"
+            VALUE "LegalCopyright",   "Copyright (C) 2007-2026  Stefan Löffler, Jonathan Kew, Charlie Sharpsteen"
+            VALUE "OriginalFilename", "TeXline.exe"
+            VALUE "ProductName",      "TeXline"
+            VALUE "ProductVersion",   TEXWORKS_VERSION
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+
+// Required by MinGW but breaks MSVC; configured by CMake
+#cmakedefine01 CREATE_MANIFEST
+#if CREATE_MANIFEST
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "TeXworks.exe.manifest"
+#endif

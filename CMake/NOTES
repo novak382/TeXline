@@ -1,0 +1,11 @@
+On locating system libraries:
+
+  https://gitlab.kitware.com/cmake/community/-/wikis/doc/tutorials/How-To-Find-Libraries
+
+  KDE's generate_findpackage_file script was used to create skeletons for many
+  of the Find*.cmake files in the Modules folder
+
+
+On getting things into their proper places in Mac App bundles:
+
+  https://www.vtk.org/Wiki/CMake:Bundles_And_Frameworks

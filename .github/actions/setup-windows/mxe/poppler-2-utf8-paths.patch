@@ -1,0 +1,160 @@
+--- a/poppler/GlobalParams.cc
++++ b/poppler/GlobalParams.cc
+@@ -135,23 +135,29 @@
+ 
+ static std::string get_poppler_localdir(const std::string &suffix)
+ {
+-    const std::string binSuffix("\\bin");
+-    std::string retval(MAX_PATH, '\0');
+-
+-    if (!GetModuleFileNameA(hmodule, retval.data(), retval.size())) {
+-        return POPPLER_DATADIR;
+-    }
+-
+-    const std::string::size_type p = retval.rfind('\\');
+-    if (p != std::string::npos) {
+-        retval.erase(p);
+-        if (retval.size() > binSuffix.size() && stricmp(retval.substr(p - binSuffix.size()).c_str(), binSuffix.c_str()) == 0) {
+-            retval.erase(p - binSuffix.size());
+-        }
+-    }
+-    retval += suffix;
+-    retval.shrink_to_fit();
+-    return retval;
++    // Win32 paths are UTF-16; Poppler's openFile consumes UTF-8. The ANSI
++    // module path cannot round-trip Chinese or supplementary characters.
++    std::wstring path(MAX_PATH, L'\0');
++    DWORD length;
++    for (;;) {
++        length = GetModuleFileNameW(hmodule, path.data(), static_cast<DWORD>(path.size()));
++        if (!length) return POPPLER_DATADIR;
++        if (length < path.size() - 1) break;
++        if (path.size() >= 32768) return POPPLER_DATADIR;
++        path.resize(std::min<size_t>(32768, path.size() * 2));
++    }
++    path.resize(length);
++    const auto slash = path.rfind(L'\\');
++    if (slash != std::wstring::npos) {
++        path.erase(slash);
++        if (path.size() > 4 && _wcsicmp(path.substr(path.size() - 4).c_str(), L"\\bin") == 0) path.resize(path.size() - 4);
++    }
++    path.append(suffix.begin(), suffix.end());
++    const int bytes = WideCharToMultiByte(CP_UTF8, 0, path.data(), static_cast<int>(path.size()), nullptr, 0, nullptr, nullptr);
++    if (!bytes) return POPPLER_DATADIR;
++    std::string result(bytes, '\0');
++    if (!WideCharToMultiByte(CP_UTF8, 0, path.data(), static_cast<int>(path.size()), result.data(), bytes, nullptr, nullptr)) return POPPLER_DATADIR;
++    return result;
+ }
+ 
+ static const char *get_poppler_datadir(void)
+@@ -457,28 +463,36 @@
+     scanEncodingDirs();
+ }
+ 
++// Convert filesystem paths explicitly; path::string() uses a locale-dependent
++// conversion on Windows and can abort a no-exceptions build for a Unicode name.
++static std::string filesystemUtf8(const std::filesystem::path &path)
++{
++    const auto bytes = path.u8string();
++    return { reinterpret_cast<const char *>(bytes.data()), bytes.size() };
++}
++
+ void GlobalParams::scanEncodingDirs()
+ {
+     std::string dataRoot = !popplerDataDir.empty() ? popplerDataDir : std::string { POPPLER_DATADIR };
+ 
+     std::error_code ec; // if ec is set, we also get the end iterator, so that's kind of okay.  If not creating with a error code, we get an exception if poppler data is missing
+-    for (const auto &entry : std::filesystem::directory_iterator { dataRoot + "/nameToUnicode", ec }) {
++    for (const auto &entry : std::filesystem::directory_iterator { std::filesystem::u8path(dataRoot + "/nameToUnicode"), ec }) {
+         if (entry.is_regular_file()) {
+             parseNameToUnicode(entry.path());
+         }
+     }
+ 
+-    for (const auto &entry : std::filesystem::directory_iterator { dataRoot + "/cidToUnicode", ec }) {
+-        addCIDToUnicode(entry.path().filename().string(), entry.path().string());
+-    }
+-
+-    for (const auto &entry : std::filesystem::directory_iterator { dataRoot + "/unicodeMap", ec }) {
+-        addUnicodeMap(entry.path().filename().string(), entry.path().string());
+-    }
+-
+-    for (const auto &entry : std::filesystem::directory_iterator { dataRoot + "/cMap", ec }) {
+-        addCMapDir(entry.path().filename().string(), entry.path().string());
+-        toUnicodeDirs.push_back(entry.path().string());
++    for (const auto &entry : std::filesystem::directory_iterator { std::filesystem::u8path(dataRoot + "/cidToUnicode"), ec }) {
++        addCIDToUnicode(filesystemUtf8(entry.path().filename()), filesystemUtf8(entry.path()));
++    }
++
++    for (const auto &entry : std::filesystem::directory_iterator { std::filesystem::u8path(dataRoot + "/unicodeMap"), ec }) {
++        addUnicodeMap(filesystemUtf8(entry.path().filename()), filesystemUtf8(entry.path()));
++    }
++
++    for (const auto &entry : std::filesystem::directory_iterator { std::filesystem::u8path(dataRoot + "/cMap"), ec }) {
++        addCMapDir(filesystemUtf8(entry.path().filename()), filesystemUtf8(entry.path()));
++        toUnicodeDirs.push_back(filesystemUtf8(entry.path()));
+     }
+ }
+ 
+@@ -491,8 +505,8 @@
+     Unicode u;
+     char *tokptr;
+ 
+-    if (!(f = openFile(name.string().c_str(), "r"))) {
+-        error(errIO, -1, "Couldn't open 'nameToUnicode' file '{0:s}'", name.string().c_str());
++    if (!(f = openFile(filesystemUtf8(name).c_str(), "r"))) {
++        error(errIO, -1, "Couldn't open 'nameToUnicode' file '{0:s}'", filesystemUtf8(name).c_str());
+         return;
+     }
+     line = 1;
+@@ -503,7 +517,7 @@
+             sscanf(tok1, "%x", &u);
+             nameToUnicodeText->add(tok2, u);
+         } else {
+-            error(errConfig, -1, "Bad line in 'nameToUnicode' file ({0:s}:{1:d})", name.string().c_str(), line);
++            error(errConfig, -1, "Bad line in 'nameToUnicode' file ({0:s}:{1:d})", filesystemUtf8(name).c_str(), line);
+         }
+         ++line;
+     }
+--- a/goo/gfile.cc
++++ b/goo/gfile.cc
+@@ -187,7 +187,6 @@
+ {
+ #ifdef _WIN32
+     OSVERSIONINFO version;
+-    wchar_t wPath[_MAX_PATH + 1];
+     char nPath[_MAX_PATH + 1];
+     wchar_t wMode[8];
+     const char *p;
+@@ -197,24 +196,13 @@
+     version.dwOSVersionInfoSize = sizeof(version);
+     GetVersionEx(&version);
+     if (version.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+-        for (p = path, i = 0; *p && i < _MAX_PATH; ++i) {
+-            if ((p[0] & 0xe0) == 0xc0 && p[1] && (p[1] & 0xc0) == 0x80) {
+-                wPath[i] = (wchar_t)(((p[0] & 0x1f) << 6) | (p[1] & 0x3f));
+-                p += 2;
+-            } else if ((p[0] & 0xf0) == 0xe0 && p[1] && (p[1] & 0xc0) == 0x80 && p[2] && (p[2] & 0xc0) == 0x80) {
+-                wPath[i] = (wchar_t)(((p[0] & 0x0f) << 12) | ((p[1] & 0x3f) << 6) | (p[2] & 0x3f));
+-                p += 3;
+-            } else {
+-                wPath[i] = (wchar_t)(p[0] & 0xff);
+-                p += 1;
+-            }
+-        }
+-        wPath[i] = (wchar_t)0;
+-        for (i = 0; (i < sizeof(mode) - 1) && mode[i]; ++i) {
+-            wMode[i] = (wchar_t)(mode[i] & 0xff);
+-        }
+-        wMode[i] = (wchar_t)0;
+-        return _wfopen(wPath, wMode);
++        const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, nullptr, 0);
++        if (!length) return nullptr;
++        std::wstring widePath(length, L'\0');
++        if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, widePath.data(), length)) return nullptr;
++        for (i = 0; (i < sizeof(wMode) / sizeof(wMode[0]) - 1) && mode[i]; ++i) wMode[i] = static_cast<wchar_t>(mode[i]);
++        wMode[i] = L'\0';
++        return _wfopen(widePath.c_str(), wMode);
+     } else {
+         for (p = path, i = 0; *p && i < _MAX_PATH; ++i) {
+             if ((p[0] & 0xe0) == 0xc0 && p[1] && (p[1] & 0xc0) == 0x80) {

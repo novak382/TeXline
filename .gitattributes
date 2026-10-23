@@ -1,0 +1,4 @@
+GitArchiveInfo.txt	export-subst
+.gitignore	export-ignore
+.gitattributes	export-ignore
+*.pdf	binary

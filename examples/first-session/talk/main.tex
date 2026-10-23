@@ -1,0 +1,24 @@
+\documentclass{beamer}
+\usepackage{amsmath,amssymb}
+\title{A perturbation bound}
+\author{TeXline writing example}
+\date{}
+\begin{document}
+\begin{frame}{Question}
+How much can a rank-one perturbation change an operator norm?
+\note{Explain the deterministic setup before stating the bound.}
+\end{frame}
+\begin{frame}{Bound}
+For a real matrix $A$ and vectors $u,v$ of matching dimensions,
+\[
+ \big|\|A+uv^{\mathsf T}\|_{\mathrm{op}}-\|A\|_{\mathrm{op}}\big|
+ \leq \|u\|_2\|v\|_2.
+\]
+\end{frame}
+\begin{frame}{Reason}
+\begin{enumerate}
+\item Bound $\|uv^{\mathsf T}\|_{\mathrm{op}}$ by Cauchy--Schwarz.
+\item Apply the triangle inequality in both directions.
+\end{enumerate}
+\end{frame}
+\end{document}

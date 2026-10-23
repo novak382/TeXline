@@ -1,0 +1,39 @@
+% !TEX TS-program = pdflatex
+% Minimal seminar slides: 16:9, projection and speaker notes.
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage{amsmath,amssymb,booktabs}
+\definecolor{Ink}{HTML}{243448}
+\definecolor{Accent}{HTML}{426B80}
+\setbeamercolor{normal text}{fg=Ink,bg=white}
+\setbeamercolor{structure}{fg=Accent}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{itemize items}[circle]
+\setbeamersize{text margin left=10mm,text margin right=10mm}
+\title{A research seminar}
+\subtitle{Problem, idea, and result}
+\author{Your name}
+\date{\today}
+\begin{document}
+\begin{frame}[plain]
+  \titlepage
+  \note{Introduce the question and why it matters.}
+\end{frame}
+\section{Main result}
+\begin{frame}{One idea per slide}
+  \begin{itemize}
+    \item State the question.
+    \item Explain the idea.
+    \item Show the conclusion.
+  \end{itemize}
+  \[
+    \frac{1}{\sqrt{n}}\sum_{i=1}^{n} X_i
+    \;\xrightarrow{\mathrm{d}}\; N(0,1).
+  \]
+  \note{Explain the assumptions before discussing the limit.}
+\end{frame}
+\appendix
+\begin{frame}{Backup}
+  Supporting details and references.
+\end{frame}
+\end{document}

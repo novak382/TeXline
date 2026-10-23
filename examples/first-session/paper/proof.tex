@@ -1,0 +1,14 @@
+\section{Bound and proof}
+\begin{theorem}\label{thm:bound}
+For every real $m\times n$ matrix $A$ and vectors $u,v$ of matching dimensions,
+\[
+ \big|\|A+uv^{\mathsf T}\|_{\mathrm{op}}-\|A\|_{\mathrm{op}}\big|
+ \leq \|u\|_2\|v\|_2.
+\]
+\end{theorem}
+\begin{proof}
+For every unit vector $x$, Cauchy--Schwarz gives
+$\|uv^{\mathsf T}x\|_2\leq\|u\|_2\|v\|_2$.
+The triangle inequality yields the upper difference bound; applying it to
+$A=(A+uv^{\mathsf T})-uv^{\mathsf T}$ gives the reverse bound.
+\end{proof}

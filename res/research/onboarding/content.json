@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-10-22-first-writing-tasks",
+  "layout": {
+    "width": 780,
+    "margin": 32,
+    "spacing": 16,
+    "mediaHeight": 350,
+    "fadeDuration": 140
+  },
+  "strings": {
+    "zh_CN": {
+      "windowTitle": "使用示范",
+      "languageTitle": "选择语言",
+      "languageName": "简体中文",
+      "languageSkip": "跳过 / Skip",
+      "skip": "跳过",
+      "back": "返回",
+      "next": "继续",
+      "finish": "开始写作",
+      "pause": "暂停演示",
+      "play": "播放演示",
+      "close": "关闭",
+      "page": "第 %1 页，共 %2 页"
+    },
+    "en": {
+      "windowTitle": "Writing walkthroughs",
+      "languageTitle": "Choose your language",
+      "languageName": "English",
+      "languageSkip": "跳过 / Skip",
+      "skip": "Skip",
+      "back": "Back",
+      "next": "Continue",
+      "finish": "Start writing",
+      "pause": "Pause demo",
+      "play": "Play demo",
+      "close": "Close",
+      "page": "Page %1 of %2"
+    }
+  },
+  "pages": [
+    {
+      "id": "start",
+      "title": {
+        "zh_CN": "打开论文，看到 PDF",
+        "en": "Open a paper and see its PDF"
+      },
+      "body": {
+        "zh_CN": "打开项目中的主文稿，编辑后编译；在源码与 PDF 间定位。",
+        "en": "Open the main document, edit and compile; jump between source and PDF."
+      },
+      "media": {
+        "zh_CN": "media/start-zh.gif",
+        "en": "media/start-en.gif"
+      }
+    },
+    {
+      "id": "citation",
+      "title": {
+        "zh_CN": "插入第一条文献引用",
+        "en": "Insert your first citation"
+      },
+      "body": {
+        "zh_CN": "插入 → 文献引用，关联文献文件，选择条目后插入。",
+        "en": "Insert → Cite a reference. Link a bibliography, choose an entry and insert it."
+      },
+      "media": {
+        "zh_CN": "media/citation-zh.gif",
+        "en": "media/citation-en.gif"
+      }
+    },
+    {
+      "id": "reference",
+      "title": {
+        "zh_CN": "找到定理在哪里用到",
+        "en": "Find where a theorem is used"
+      },
+      "body": {
+        "zh_CN": "在定理处右键查阅上下文，查看引用位置，再返回原处。",
+        "en": "Right-click a theorem to read its context, visit a citation and return."
+      },
+      "media": {
+        "zh_CN": "media/reference-zh.gif",
+        "en": "media/reference-en.gif"
+      }
+    },
+    {
+      "id": "versions",
+      "title": {
+        "zh_CN": "改写前，保留这一段",
+        "en": "Keep a passage before rewriting"
+      },
+      "body": {
+        "zh_CN": "选中证明，右键保留选区版本；改写后比较并取回。",
+        "en": "Select the proof and keep a version from its context menu; compare and restore after rewriting."
+      },
+      "media": {
+        "zh_CN": "media/versions-zh.gif",
+        "en": "media/versions-en.gif"
+      }
+    },
+    {
+      "id": "places",
+      "title": {
+        "zh_CN": "明天，从这里接着写",
+        "en": "Continue here tomorrow"
+      },
+      "body": {
+        "zh_CN": "文件 → 保存写作现场；下次搜索“接着写”，恢复原位置。",
+        "en": "File → Save writing place. Next time search “resume writing” to return."
+      },
+      "media": {
+        "zh_CN": "media/places-zh.gif",
+        "en": "media/places-en.gif"
+      }
+    },
+    {
+      "id": "slides",
+      "title": {
+        "zh_CN": "整理讲稿，再展开预览",
+        "en": "Arrange slides, then expand the preview"
+      },
+      "body": {
+        "zh_CN": "在左侧调整幻灯片顺序，点击预览右上角展开图标。",
+        "en": "Reorder slides in the left list, then expand the preview from its upper-right corner."
+      },
+      "media": {
+        "zh_CN": "media/slides-zh.gif",
+        "en": "media/slides-en.gif"
+      }
+    }
+  ]
+}

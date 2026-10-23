@@ -1,0 +1,71 @@
+{
+  "verifiedOn": "2026-10-20",
+  "materials": [
+    {
+      "files": [
+        "met-bronze-mirror-22-139-84.jpg",
+        "bronze-mirror.tex"
+      ],
+      "source": "https://www.metmuseum.org/art/collection/search/251256",
+      "accession": "22.139.84",
+      "rights": "The Met Open Access, public domain / CC0",
+      "adaptation": "Unmodified museum image; independently written object note and reformatted caption; no excavation provenance invented",
+      "imageDownload": "https://images.metmuseum.org/CRDImages/gr/original/DP254625.jpg"
+    },
+    {
+      "files": [
+        "penguins.csv",
+        "penguin-morphology.tex",
+        "penguins-summary.json"
+      ],
+      "source": "https://github.com/allisonhorst/palmerpenguins",
+      "primaryStudy": "https://doi.org/10.1371/journal.pone.0090081",
+      "rights": "Data CC0; observations by Kristen Gorman and Palmer Station LTER; palmerpenguins by Allison Horst, Alison Hill and Kristen Gorman",
+      "adaptation": "342 complete cases from 344 rows, grouped by species; body mass g/1000; arithmetic means recomputed, not copied published table or new measurements; edit rounds 3.700662251655629 to 3.701"
+    },
+    {
+      "files": [
+        "commons-literature.bib",
+        "common-pool-resources.tex"
+      ],
+      "source": "https://www.ostromworkshop.indiana.edu/library/index.html",
+      "metadataSources": [
+        "https://pubmed.ncbi.nlm.nih.gov/19628857/",
+        "https://www.cambridge.org/core/books/governing-the-commons/7AB7AE11BADA84409C34815CC288CD79"
+      ],
+      "pageVerified": "Ostrom 2009, p.419, opening framework; inspected publisher PDF mirrored by CANARI",
+      "rights": "Bibliographic facts and independently written paraphrase; copyrighted paper/book text and figures not redistributed",
+      "adaptation": "Local genuine BibTeX; no fictitious authors or quoted article text"
+    },
+    {
+      "files": [
+        "spectral-stability.tex",
+        "operator-norm-notes.tex",
+        "spectral-proof.tex",
+        "variational-proof.tex",
+        "damped-oscillator.tex",
+        "shortest-paths.tex"
+      ],
+      "source": "Independently written mathematical exposition and diagrams for TeXline",
+      "rights": "CC0 dedication for these original texts and diagrams",
+      "adaptation": "Self-contained deterministic proofs and standard oscillator/shortest-path derivations; not presented as published papers or measured studies"
+    }
+  ],
+  "files": {
+    "bronze-mirror.tex": "bc9102cf47016755af7dd9f4df6d8570487f8cb7665025447079024a5d681626",
+    "common-pool-resources.tex": "6255e175f929c6ff2f9e83f65d2122fc3ee7fecb398b477af9e53d99e4aaa59d",
+    "commons-literature.bib": "9204973ba1f428a227844ec365829e0dae137c27aad44cde21cd2d79c15d1d61",
+    "damped-oscillator.tex": "888683b50cf9957e14b3884aac0fbbf3cbd59bd83b2371808bff8706068b6385",
+    "met-bronze-mirror-22-139-84.jpg": "f51a7b3c217b9103cc7dca6966da8a5288120e833bfc728ae20cca5ee6f8a66f",
+    "mirror-251256.json": "f624f615528a2c737809d55671c5ca5f7f4789a76c4f3dbdda83c870a367f70a",
+    "operator-norm-notes.tex": "fc3e39b373cccc3172cd5ae1823e27c29c9cd7d9bb5dd6feed629810c061c64f",
+    "palmer-DESCRIPTION": "71ffb68cb47285e2ea534da56b2e9af4532148542a063868c38646bd8c990a31",
+    "penguin-morphology.tex": "59267d1086d76bfd860e6da3cf3b671232b6a07f715097c036c4482938d32904",
+    "penguins-summary.json": "c9eee04f0016156bc2107eb6a75dac04ae1c5b418c267d77713d52682d33e780",
+    "penguins.csv": "f204db2c753b0937caac3cb35258562c14f073e4bbc76be24b4c51ce22767a93",
+    "shortest-paths.tex": "b369c9b42711b5268ef398827ce0e66a7278cc24c204dbd269a896c8ced22878",
+    "spectral-proof.tex": "146d767d23f54096598679757feac0911758d1775351a3a5acb945174daeaab8",
+    "spectral-stability.tex": "0aa5a8860545ad4de089cf71d1f8140351e9611b47ccb11533bd5eb6a3fa2f2d",
+    "variational-proof.tex": "a89716c38632144eb54960ff70d6911f10f7d29ae2f23efed04007e0fb42118f"
+  }
+}

@@ -1,0 +1,14 @@
+Microsoft VS Code Codicons
+Copyright (c) Microsoft Corporation.
+Source: https://github.com/microsoft/vscode-codicons
+Commit: 8853e0b1b0e2058b099fde515d5f1f478db2f8e1
+License: Creative Commons Attribution 4.0 International (CC BY 4.0).
+The complete license is included as LICENSE in this directory.
+
+Imported SVG geometry and source bytes in this directory are unmodified.
+Caption hover colour is adapted at rendering time.
+../compile-sync.svg combines the original play and cloud paths by translation
+and scaling to preserve the synchronized-project badge; it is an adaptation.
+Its sources and checksum are recorded separately in manifest.json.
+manifest.json records each imported original and its resource aliases, source filename and SHA-256.
+Specialized TeX/PDF icons without an equivalent retain their existing assets.

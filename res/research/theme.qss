@@ -1,0 +1,182 @@
+/* Pale frame, white writing surface and true alpha corners on popup windows. */
+QWidget { font-family: "Segoe UI", "Microsoft YaHei UI"; color: #202629; }
+QMainWindow, QDialog { background: #ebf5f9; }
+QWidget[researchWhiteSurface="true"] { background: #ffffff; }
+QMainWindow::separator { background: #ebf5f9; height: 5px; width: 5px; border-top: 1px solid #dde6ea; }
+QMainWindow[researchFocus="true"]::separator { background: white; border: none; }
+QDockWidget#researchReviewPanel { background: #ebf5f9; border: none; }
+QMenuBar { background: #ebf5f9; padding: 2px 8px; border: none; font-size: 15px; }
+QMenuBar::item { padding: 4px 9px; border-radius: 5px; }
+QMenuBar::item:selected { background: #e6edf0; }
+QMenu { background: #ffffff; border: 1px solid #d7e1e6; border-radius: 8px; padding: 5px; font-size: 15px; }
+QMenu::item { padding: 6px 28px 6px 12px; border-radius: 5px; }
+QMenu::item:selected { background: #e6edf0; color: #202629; }
+QMenu::item:disabled { color: #929b9f; }
+QMenu::right-arrow { image: url(:/research/icons/codicons/chevron-right.svg); width: 16px; height: 16px; }
+QMenu::indicator { width: 16px; height: 16px; }
+QMenu::indicator:checked { image: url(:/research/icons/codicons/check.svg); }
+QMenu::indicator:unchecked { image: none; }
+QMenu::separator { height: 1px; background: #dde6ea; margin: 5px 8px; }
+QToolBar { background: #ebf5f9; border: none; border-bottom: 1px solid #dde6ea; padding: 8px; spacing: 8px; }
+QToolBar::handle, QToolBar::separator { width: 0px; height: 0px; margin: 0px; background: transparent; }
+QToolButton { background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 4px; }
+QToolButton:hover { background: #e6edf0; }
+QToolButton:pressed, QToolButton:checked { background: #dde6ea; }
+QToolButton:disabled { color: #929b9f; }
+QMainWindow QToolBar[researchControls="true"] QToolButton[researchControl="true"] {
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: #30363c; font-family: "Segoe UI", "Microsoft YaHei UI"; font-size: 15px;
+  min-width: 0px; min-height: 0px; padding: 0px 8px;
+}
+QMainWindow QToolBar[researchControls="true"] QToolButton[researchControl="true"]:hover { background: rgba(50, 60, 50, 14); color: #202629; }
+QMainWindow QToolBar[researchControls="true"] QToolButton[researchControl="true"]:pressed { background: rgba(50, 60, 50, 27); }
+QMainWindow QToolBar[researchControls="true"] QToolButton[researchControl="true"]:checked { background: #dde6ea; color: #202629; }
+QMainWindow QToolBar[researchControls="true"] QToolButton[researchControl="true"]:focus { border-color: #8d98a8; }
+QMainWindow QToolBar[researchControls="true"] QToolButton[researchControl="true"]:disabled { color: #929b9f; }
+QMainWindow QToolBar[researchControls="true"] QToolButton[researchButtonRole="compile"] { color: #202629; font-weight: 500; }
+QToolButton[researchButtonRole="icon"] { padding: 0px; }
+QToolButton[researchButtonRole="compile"], QToolButton[researchButtonRole="menu"] { padding-right: 26px; }
+QToolButton::menu-button { border: none; width: 18px; }
+/* Split buttons and instant popups share the Compile button's disclosure. */
+QToolButton::menu-arrow, QToolButton::menu-indicator, QPushButton::menu-indicator { image: url(:/research/icons/chevron.svg); width: 10px; height: 10px; }
+QToolButton::menu-indicator, QPushButton::menu-indicator { subcontrol-origin: padding; subcontrol-position: right center; right: 4px; }
+QToolButton#researchMore::menu-indicator { image: none; width: 0px; }
+QToolButton#researchReviewMore::menu-indicator, QToolButton#researchReviewMore::menu-arrow { image: none; width: 0px; height: 0px; }
+QToolButton#researchFocusMore, QToolButton#researchFocusCompile, QToolButton#researchFocusZoom, QWidget#researchPaperControls QToolButton { background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 0px; }
+QToolButton#researchFocusMore:hover, QToolButton#researchFocusCompile:hover, QToolButton#researchFocusZoom:hover, QWidget#researchPaperControls QToolButton:hover { background: #f2f3f1; }
+QToolButton#researchFocusMore:pressed, QToolButton#researchFocusCompile:pressed, QToolButton#researchFocusZoom:pressed, QWidget#researchPaperControls QToolButton:pressed { background: #e8ebe7; }
+QToolButton#researchFocusMore:focus, QToolButton#researchFocusCompile:focus, QToolButton#researchFocusZoom:focus, QWidget#researchPaperControls QToolButton:focus { border-color: #8d98a8; }
+QToolButton#researchFocusMore::menu-indicator, QToolButton#researchFocusZoom::menu-indicator { image: none; width: 0px; }
+QMainWindow[researchFocus="true"] QToolButton#researchCompile::menu-button,
+QMainWindow[researchFocus="true"] QToolButton#researchCompile::menu-arrow { image: none; border: none; width: 0px; }
+QComboBox { background: #fff; border: 1px solid #d7e1e6; border-radius: 5px; font-size: 15px; padding: 0px 26px 0px 9px; min-height: 30px; max-height: 30px; }
+QComboBox:hover { border-color: #a5a5ab; }
+QComboBox:focus { border-color: #7d8997; }
+QComboBox::drop-down { border: none; width: 22px; }
+QComboBox::down-arrow { image: url(:/research/icons/chevron.svg); width: 10px; height: 10px; }
+QComboBox QAbstractItemView { background: #fff; border: 1px solid #d7e1e6; border-radius: 8px; selection-background-color: #e6edf0; selection-color: #202629; padding: 4px; }
+CompletingEdit#textEdit { background: #fff; color: #202629; border: none; border-radius: 0px; padding: 0px 4px 4px 8px; font-family: "JetBrains Mono NL", "Microsoft YaHei UI"; selection-background-color: #cfe3ff; selection-color: #17283f; }
+QTextEdit#textEdit_console { background: #f9f9fb; color: #44444b; border: none; padding: 12px; font-family: "JetBrains Mono NL", "Microsoft YaHei UI"; selection-background-color: #cfe3ff; }
+QLineEdit, QSpinBox, QDoubleSpinBox { background: #fff; border: 1px solid #d7e1e6; border-radius: 5px; font-size: 15px; min-height: 30px; max-height: 30px; padding: 0px 8px; selection-background-color: #cfe3ff; selection-color: #17283f; }
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border-color: #7d8997; }
+QPushButton { background: #fff; border: 1px solid #d7e1e6; border-radius: 5px; font-family: "Segoe UI", "Microsoft YaHei UI"; font-size: 15px; padding: 0px 12px; min-height: 30px; max-height: 30px; min-width: 62px; }
+QPushButton:hover { background: #ededf0; }
+QPushButton:pressed { background: #e2e2e7; }
+QPushButton:default { background: #edf3f6; border-color: #bccbd3; color: #30363c; font-weight: 500; }
+QPushButton:default:hover { background: #e6edf0; border-color: #aebfc9; }
+QPushButton:default:pressed { background: #dce6eb; border-color: #aebfc9; }
+QPushButton:flat { background: transparent; border-color: transparent; color: #51565b; }
+QPushButton:flat:hover { background: #e6edf0; }
+QPushButton:disabled { color: #929b9f; background: #f2f2f5; }
+/* Height follows actual font metrics; retain one top rule and no item frames. */
+QStatusBar { background: #ebf5f9; border-top: 1px solid #dde6ea; padding: 0px 8px; color: #51565b; font-family: "Microsoft YaHei UI", "Segoe UI"; font-size: 14px; }
+QStatusBar[researchAnimatedNotice="true"] { color: transparent; }
+QStatusBar::item { border: none; }
+/* Compact status fields do not inherit the full form-field vertical padding. */
+QStatusBar QSpinBox, QStatusBar QDoubleSpinBox { font-family: "Segoe UI", "Microsoft YaHei UI"; font-size: 13px; min-height: 20px; max-height: 20px; padding: 0px 8px; }
+QStatusBar QSpinBox QLineEdit, QStatusBar QDoubleSpinBox QLineEdit { font-family: "Segoe UI", "Microsoft YaHei UI"; background: transparent; border: none; padding: 0px; font-size: 13px; }
+QStatusBar QSpinBox#researchPdfPageField, QStatusBar QDoubleSpinBox#researchPdfZoomField { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 0px 6px; }
+QStatusBar QSpinBox#researchPdfPageField, QStatusBar QSpinBox#researchPdfPageField QLineEdit { font-size: 14px; }
+QStatusBar QSpinBox#researchPdfPageField:hover, QStatusBar QDoubleSpinBox#researchPdfZoomField:hover { background: #f6fafc; border-color: #cbd8df; }
+QStatusBar QSpinBox#researchPdfPageField:focus, QStatusBar QDoubleSpinBox#researchPdfZoomField:focus { background: #fff; border-color: #7d8997; }
+QStatusBar QLabel#researchPdfPageTotal { background: transparent; border: none; padding: 1px 2px 0px 0px; font-family: "Segoe UI", "Microsoft YaHei UI"; font-size: 14px; min-height: 21px; max-height: 21px; }
+QStatusBar QLabel { color: #51565b; font-family: "Microsoft YaHei UI", "Segoe UI"; font-size: 14px; }
+QStatusBar[researchSourceStatus="true"] QLabel { border: none; background: transparent; padding: 0px 4px; }
+QStatusBar QToolButton#researchBuildSummary { font-family: 'Segoe UI', 'Microsoft YaHei UI'; font-size: 13px; font-weight: 400; color: #51565b; background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 0px 16px 0px 4px; }
+QStatusBar QToolButton#researchBuildSummary:hover { background: #e6edf0; color: #3a3a3c; }
+QStatusBar QToolButton#researchBuildSummary:focus { border-color: #8d98a8; }
+QStatusBar QToolButton#researchBuildSummary[researchBuildAttention="true"] { color: #9b623d; }
+QStatusBar QToolButton#researchBuildSummary::menu-indicator { image: url(:/research/icons/chevron.svg); width: 10px; height: 10px; right: 4px; }
+QLabel#researchFocusMessage { font-family: "Microsoft YaHei UI", "Segoe UI"; font-size: 14px; color: #48484a; background: #ffffff; border: 1px solid #d7e1e6; border-radius: 8px; padding: 0px; }
+QScrollBar:vertical { background: transparent; width: 10px; margin: 3px 1px; }
+QScrollBar::handle:vertical { background: #c8c8ce; border-radius: 4px; min-height: 36px; margin: 0px 2px; }
+QScrollBar::handle:vertical:hover { background: #a8a8b1; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QScrollBar:horizontal { background: transparent; height: 10px; margin: 1px 3px; }
+QScrollBar::handle:horizontal { background: #c8c8ce; border-radius: 4px; min-width: 36px; margin: 2px 0px; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
+QSplitter::handle { background: #dde6ea; height: 2px; width: 2px; }
+QTabWidget::pane { border: none; background: transparent; margin-top: 12px; }
+/* Pages are navigation, rather than a row of independent pill buttons. */
+QTabBar { background: transparent; border-radius: 0px; }
+QTabBar::tab { background: transparent; border: 1px solid transparent; border-bottom: 2px solid #dde6ea; border-radius: 0px; margin: 2px 0px; font-size: 14px; padding: 4px 14px; color: #40464d; }
+QTabBar::tab:selected { color: #202629; border-bottom-color: #51565b; }
+QTabBar::tab:hover:!selected { background: #e6edf0; }
+QTabBar::tab:focus { border-top-color: #8d98a8; }
+QGroupBox { border: none; margin-top: 18px; padding: 16px 4px 8px; }
+QGroupBox::title { subcontrol-origin: margin; left: 4px; padding: 0px; color: #3a3a3c; font-weight: 500; }
+QTreeView, QListView, QTableView { background: #fff; alternate-background-color: #ebf5f9; border: 1px solid #d7e1e6; selection-background-color: #e6edf0; selection-color: #202629; }
+QHeaderView::section { background: #ebf5f9; border: none; border-bottom: 1px solid #d7e1e6; padding: 6px; }
+QToolTip { font-size: 13px; background: #ffffff; color: #202629; border: 1px solid #d7e1e6; border-radius: 8px; padding: 5px 8px; }
+QToolBar#researchFindBar QLineEdit { min-height: 0px; padding: 0px 10px; }
+QDialog#researchPalette { background: #ebf5f9; font-size: 15px; }
+QDialog#researchPalette QLineEdit { background: white; border: 1px solid #d7e1e6; border-radius: 5px; padding: 0px 10px; font-size: 15px; min-height: 30px; max-height: 30px; }
+QDialog#researchPalette QListWidget { background: white; border: 1px solid #dde6ea; border-radius: 0px; padding: 6px; font-size: 15px; }
+QDialog#researchPalette QListWidget::item { padding: 8px; border-radius: 5px; }
+QDialog#researchPalette QListWidget::item:selected { background: #e6edf0; color: #202629; }
+QDialog#researchPalette QLabel { color: #6e6e73; padding: 4px; }
+QTextBrowser#researchProblems { background: #fff; border: none; font-size: 14px; padding: 10px; }
+QTextBrowser#researchHistoryPreview { background: #fff; border: 1px solid #dde6ea; border-radius: 0px; font-family: "JetBrains Mono NL", "Microsoft YaHei UI"; font-size: 16px; padding: 8px; }
+QWidget#researchReviewBody { background: #ebf5f9; }
+QTextBrowser#researchReviewText { background: #fff; border: 1px solid #dde6ea; border-radius: 0px; padding: 8px; font-family: "JetBrains Mono NL", "Microsoft YaHei UI"; font-size: 14px; }
+/* Focus changes the writing surface, never button grammar or geometry. */
+QMainWindow[researchFocus="true"], QMainWindow[researchFocus="true"] > QWidget#centralwidget { background: #fff; }
+QMainWindow[researchFocus="true"] QMenuBar, QMainWindow[researchFocus="true"] QToolBar[researchControls="true"] { background: #fff; border: none; }
+QMainWindow[researchFocus="true"] CompletingEdit#textEdit { padding: 0px 4px 4px 8px; }
+/* The reading surface meets the window without a sunken frame or dark rails. */
+QMainWindow[researchFocus="true"] QGraphicsView { background: #fff; border: none; }
+QMainWindow[researchFocus="true"] QAbstractScrollArea::corner { background: #fff; border: none; }
+QMainWindow[researchFocus="true"] QGraphicsView QScrollBar { background: #fff; border: none; }
+QMainWindow[researchFocus="true"] QGraphicsView QScrollBar::handle { background: #d8dcda; border: none; }
+QMainWindow[researchFocus="true"] QGraphicsView QScrollBar::handle:hover { background: #b8bfba; }
+QMainWindow[researchFocus="true"] QGraphicsView QScrollBar::add-line,
+QMainWindow[researchFocus="true"] QGraphicsView QScrollBar::sub-line { background: #fff; border: none; }
+QMainWindow[researchFocus="true"] QGraphicsView QScrollBar::add-page,
+QMainWindow[researchFocus="true"] QGraphicsView QScrollBar::sub-page { background: #fff; border: none; }
+
+/* Pointer feedback is quiet; keyboard focus remains visible. */
+QToolButton:focus { border-color: #8d98a8; }
+QPushButton:focus { border-color: #7d8997; }
+/* Embedded editors use their parent field geometry, not another form row. */
+QComboBox QLineEdit, QAbstractSpinBox QLineEdit { border: none; background: transparent; padding: 0px; min-height: 0px; max-height: 16777215px; }
+QDialog QLabel { color: #30363c; font-size: 14px; }
+QCheckBox, QRadioButton, QGroupBox { font-size: 14px; }
+QTreeView, QListView, QTableView { font-size: 14px; }
+QLabel#researchSlidePosition { color: #30363c; font-size: 13px; }
+QWidget#researchSlideNotesPane QLabel { color: #40464d; font-size: 14px; }
+/* Numeric fields use the same quiet disclosure as other fields. No tiny
+   native bevels or platform-dependent arrow boxes inside the input. */
+QSpinBox::up-button, QDoubleSpinBox::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 20px; border: none; background: transparent; }
+QSpinBox::down-button, QDoubleSpinBox::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 20px; border: none; background: transparent; }
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow { image: url(:/research/icons/chevron-up.svg); width: 10px; height: 10px; }
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow { image: url(:/research/icons/chevron.svg); width: 10px; height: 10px; }
+QToolButton[researchActiveScope="true"] { background: #e5e7e9; border-bottom-color: #51565b; color: #202629; }
+QLabel#researchFocusMessage[researchInlineNotice="true"] { font-family: "Microsoft YaHei UI", "Segoe UI"; font-size: 14px; background: #ebf5f9; border: none; border-radius: 0px; padding: 0px; }
+
+
+/* A continuous white sheet under the caption, following the reference image. */
+QMainWindow QToolBar[researchWorkspace="true"] { background: white; border-top: 1px solid #dce6eb; border-top-left-radius: 16px; border-top-right-radius: 16px; }
+QMainWindow[researchFocus="true"] QToolBar[researchWorkspace="true"] { border: none; border-radius: 0px; }
+QWidget#researchPaperControls QToolButton { border: none; border-radius: 0px; padding: 0px; }
+
+/* Search results are comfortably selectable; shortcuts form a separate column. */
+QListWidget#researchCommandResults { background: white; border: none; padding: 4px; font-size: 15px; }
+QListWidget#researchCommandResults::item { min-height: 34px; padding: 0px 8px; border-radius: 5px; }
+QListWidget#researchCommandResults::item:selected { background: #e6edf0; color: #202629; }
+QListWidget#researchSettingsMatches { padding: 4px; border-radius: 5px; }
+QListWidget#researchSettingsMatches::item { padding: 6px 8px; border-radius: 4px; }
+QLabel#researchCommandEmpty { color: #6e6e73; padding: 24px 12px; font-size: 14px; }
+QToolButton#researchSlideMoreButton::menu-indicator, QToolButton#researchSlidePreviewMore::menu-indicator { image: none; width: 0px; }
+
+/* Settings use the same quiet rows in tools, snippets and shortcut assignment.
+   Scope these rules to configuration lists, never the editable table grid. */
+QLabel[settingsHeading="true"] {font-size:16px;font-weight:600;color:#30363c;}
+QToolButton#pdfPaperColor {border:1px solid #d7e1e6;background:white;border-radius:5px;}
+QAbstractItemView[researchSettingsList="true"] {border:none;background:white;}
+QListView[researchSettingsList="true"]::item {min-height:30px;padding:0px 10px;border:1px solid transparent;border-radius:4px;}
+QAbstractItemView[researchSettingsList="true"]::item:hover {background:#f4f6f7;}
+QAbstractItemView[researchSettingsList="true"]::item:selected {background:#e6edf0;color:#202629;}
+QTableView[researchSettingsList="true"] QHeaderView::section {background:white;color:#737b82;border-bottom:1px solid #e6ecef;padding:6px 10px;}
+QPlainTextEdit#completionSnippetBody,QTextEdit#shorthandTrial,QTextEdit#researchEditorPreview {border:1px solid #d7e1e6;background:white;padding:6px;}

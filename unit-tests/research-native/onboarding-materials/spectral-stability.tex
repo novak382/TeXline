@@ -1,0 +1,37 @@
+% !TeX program = pdflatex
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[margin=28mm]{geometry}
+\newtheorem{theorem}{Theorem}
+\title{Spectral stability from the variational principle}
+\author{}\date{}
+\begin{document}
+\maketitle
+\section{Operator norm}
+For $A\in\mathbb C^{m\times n}$, write
+$\|A\|_{\mathrm{op}}=\sup_{\|z\|_2=1}\|Az\|_2$.
+The triangle inequality gives
+$\|A\|_{\mathrm{op}}\leq\|B\|_{\mathrm{op}}+\|A-B\|_{\mathrm{op}}$.
+Interchanging $A$ and $B$ proves the Lipschitz bound.
+\section{A rank-one perturbation}
+Let $u$ and $v$ be unit vectors.
+Take $\theta>0$ and set $X=\theta uv^*+E$.
+The nonzero singular value of $\theta uv^*$ is $\theta$.
+\begin{equation}\label{eq:bound}
+  |s_1(X)-\theta|\leq\|E\|_{\mathrm{op}}.
+\end{equation}
+Equation~\eqref{eq:bound} is deterministic.
+\section{Variational proof}
+For every unit vector $z$,
+\[\|Xz\|_2\leq\theta|v^*z|+\|Ez\|_2
+  \leq\theta+\|E\|_{\mathrm{op}}.\]
+Taking the supremum proves the upper bound.
+For the lower bound, evaluate the bilinear form at $u,v$:
+\[s_1(X)\geq|u^*Xv|=|\theta+u^*Ev|
+  \geq\theta-\|E\|_{\mathrm{op}}.\]
+These inequalities hold for every rectangular noise matrix.
+\section{Interpretation}
+Noise sets the estimation error.
+The bound uses no independence or distributional assumption.
+A probabilistic model is needed only to control the noise norm.
+\end{document}

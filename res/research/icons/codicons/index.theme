@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=TeXline Codicons
+Comment=Original Microsoft VS Code Codicons with specialized TeXworks fallbacks
+Inherits=tango-texworks
+Directories=actions/scalable
+
+[actions/scalable]
+Size=16
+Type=Scalable
+MinSize=8
+MaxSize=256
