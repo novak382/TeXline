@@ -7,7 +7,7 @@
 #include <QThread>
 static bool waitFor(const std::function<bool()> &f,int ms=20000){QElapsedTimer t;t.start();while(!f()&&t.elapsed()<ms){QCoreApplication::processEvents();QThread::msleep(3);}return f();}
 int main(int argc,char **argv){const QString report=QString::fromLocal8Bit(argv[1]);argc=1;TWApp app(argc,argv);app.setQuitOnLastWindowClosed(false);QTimer::singleShot(80,&app,[&]{
- QJsonArray checks;int failures=0;auto check=[&](QString name,bool ok){checks.append(QJsonObject{{"name",name},{"passed",ok}});failures+=!ok;QFile out(report);if(out.open(QIODevice::WriteOnly))out.write(QJsonDocument(QJsonObject{{"checks",checks},{"failures",failures}}).toJson());};
+ QJsonArray checks;int failures=0;auto check=[&](QString name,bool ok){checks.append(QJsonObject{{"name",name},{"passed",ok}});failures+=!ok;QFile out(report);if(out.open(QIODevice::WriteOnly))out.write(QJsonDocument(QJsonObject{{"devicePixelRatio",qApp->primaryScreen()->devicePixelRatio()},{"checks",checks},{"failures",failures}}).toJson());};
  const auto folder=QFileInfo(report).absolutePath(),root=folder+"/main.tex";
  const QString original="\\documentclass{beamer}\n\\title{Talk}\n\\begin{document}\n\\begin{frame}{First}\nAlpha\n\\end{frame}\n\\begin{frame}{Second}\nBeta\n\\end{frame}\n\\input{chapter}\n% End matter\n\\end{document}\n% After document\n";
  {QFile f(root);f.open(QIODevice::WriteOnly);f.write(original.toUtf8());}

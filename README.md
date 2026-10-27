@@ -12,6 +12,8 @@
 
 TeXline gives your writing room while keeping ordinary LaTeX files underneath. Edit locally, compile with your own TeX installation, and move between source and PDF with SyncTeX. No account is needed.
 
+[28 October maintenance update](docs/releases/2026-10-28.md): Beamer preview sizing, frame mapping and slide editing fixes.
+
 ## Just you. And the next sentence.
 
 Work on one section or the whole file. Enter focus mode without losing your section, selection or reading position. Choose your font and line spacing; turn on typewriter scrolling if it suits you.
@@ -51,12 +53,12 @@ Menus start with the essentials and can be customized in settings. [Find each fe
 ## Start with one file
 
 1. Install [TeX Live](https://tug.org/texlive/) or [MiKTeX](https://miktex.org/). TeXline uses your local engines and packages.
-2. Get the [Windows installer](https://texline.dev/downloads/v1.0.0/TeXline-1.0.0-Setup-x64.exe) or [portable ZIP](https://texline.dev/downloads/v1.0.0/TeXline-1.0.0-Portable-x64.zip), then open `TeXline.exe`.
+2. Get the [Windows installer](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Setup-x64.exe) or [portable ZIP](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Portable-x64.zip), then open `TeXline.exe`.
 3. Open a file or start from a template. Choose **Compile** to see the PDF.
 
 The installer works per user and leaves file associations unchanged. The Windows package is currently unsigned. Git features require a separate Git installation.
 
-[Installation](docs/INSTALL.md) · [First writing session](docs/FIRST-SESSION.md) · [Release & checksums](https://github.com/novak382/TeXline/releases/tag/v1.0.0) · [Known limitations](docs/KNOWN-LIMITATIONS.md)
+[Installation](docs/INSTALL.md) · [First writing session](docs/FIRST-SESSION.md) · [Release & checksums](https://github.com/novak382/TeXline/releases/tag/v1.0.0-20261028) · [Known limitations](docs/KNOWN-LIMITATIONS.md)
 
 ## Feedback and contributing
 
@@ -71,6 +73,6 @@ TeXline is an independent derivative of [TeXworks](https://github.com/TeXworks/t
 <details>
 <summary>Rebuilding the 1.0 release</summary>
 
-The [release assets](https://github.com/novak382/TeXline/releases/tag/v1.0.0) include the application source, checksums, the base RebuildKit and the 1.0.0 SDK update containing the modified Qt sources. Use **both SDK archives**. See [build instructions](docs/BUILDING.md) for reconstruction steps and verification boundaries.
+The [release assets](https://github.com/novak382/TeXline/releases/tag/v1.0.0-20261028) include the application source, checksums, the base RebuildKit and the 1.0.0 SDK update containing the modified Qt sources. Use **both SDK archives**. See [build instructions](docs/BUILDING.md) for reconstruction steps and verification boundaries.
 
 </details>

@@ -2,6 +2,7 @@
 #include "ResearchStart.h"
 #include "ResearchAppearance.h"
 #include "ResearchSettings.h"
+#include "ResearchSlides.h"
 #include "TeXDocumentWindow.h"
 #include "CompletingEdit.h"
 #include "TWApp.h"
@@ -190,10 +191,10 @@ private:
     prefix+=QStringLiteral("\\begin{document}\n");
     if(slide)prefix+=QStringLiteral("\\begin{frame}{}\n");
     const QString suffix=slide?QStringLiteral("\n\\end{frame}\n\\end{document}\n"):QStringLiteral("\n\\end{document}\n");
-    // An ordinary native edit preserves a single undo step and triggers existing
-    // mode-line engine detection and article/slide recognition.
+    // Preserve one native undo step, then reuse the bounded slide detector.
     dismiss();QTextCursor cursor(editor->document());cursor.beginEditBlock();cursor.insertText(prefix+suffix);cursor.endEditBlock();
     cursor.setPosition(int(prefix.size()));editor->setTextCursor(cursor);editor->ensureCursorVisible();focusEditor();
+    if(slide)detectSlideMode(window);
   }
   bool eventFilter(QObject *object,QEvent *event) override {
     if(dismissed)return false;

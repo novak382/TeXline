@@ -1,34 +1,36 @@
-# TeXline 1.0.0 — 2026-10-24
+# TeXline 1.0 — maintenance update, 28 October 2026
 
-This is the first public release. Earlier 1.1.x local iterations were development
-builds; the public release uses version 1.0.0.
+This update keeps the application version at 1.0.0. The dated release identifies
+the new packages without replacing the original release or its downloads.
 
-The installed and packaged application SHA-256 is:
+## Beamer fixes
 
-`791c526c4a7d433f95d374a49eb20a489d4438b4b96de6d6e97c01d9d78e3d50`
+- Compiled slide previews keep their fitted size and reading position.
+- The slide list follows supported template cover frames, included content and
+  locally grouped closing slides. Editing an included file invalidates old mappings.
+- Selecting, reordering, cutting or pasting slides, and undoing or redoing those
+  actions, preserve the current frame view instead of switching it to full source.
+- Starting a Beamer file from an empty document enters slide mode correctly.
+- When a template cannot be mapped safely, the preview identifies the physical
+  PDF page; unsupported structures remain protected from structural edits.
 
-The original installed source ZIP SHA-256 is:
+## Verification and limits
 
-`44203c677ea642e129e9160dbef58ddfcdba2c6fed958478e5f307f9754134de`
+The same application binary passed 11 native hidden-desktop runs with 687 checks,
+covering three interface languages, effective 100/125/150/200% scaling, narrow
+windows, mapping, slide operations and undo/redo. Installed and rollback private
+copies passed 105 self-checks each. Publication checks package integrity separately.
+Hidden-desktop checks do not certify real IME input, physical mouse behavior,
+mixed-DPI monitors or every custom Beamer macro. Existing demo recordings are
+illustrations of the workflows, not recordings of this maintenance binary.
 
-The public source snapshot preserves all application/build inputs from that
-export; publication documentation, the source exporter and manual build workflow
-are updated for the actual GitHub endpoint and SDK update. The source manifest
-records every published file and binds the snapshot to the application hash.
-It does not include private checkout history or local validation folders.
+The source archive preserves all 1,335 recorded compiled source and test inputs
+byte for byte. Public documentation is refreshed separately. Dependencies use
+the unchanged base RebuildKit plus the required 1.0.0 SDK Update, linked from
+the original release. A full cold toolchain rebuild is not certified.
 
-The final writing-start round recorded seven native hidden-desktop runs with
-923 checks, including three languages, effective 100/125/150/200% scales,
-half-screen, focus mode, cancel/focus restoration, undo/redo, recent-file failure
-and six Save As/TeX/PDF workflows. Installation and rollback private-copy checks
-recorded 105 checks each. Packaging this already-installed binary did not rerun
-the full product suite. Earlier guide recordings retain their original baseline;
-they are not presented as recordings of this release binary.
+Application SHA-256: `dda20dc020a1f79ed104686684bde4db8eab69dcf970c6328f0731ee187f0080`.
 
-Physical mouse, real IME, foreground animation appearance, mixed-DPI dual monitors
-and external user trials are not certified. The complete cold dependency build
-has not been independently reproduced.
-
-Download the Source, base RebuildKit, SDK Update and checksums alongside Setup
-or the portable package. The base kit alone contains an older QtGui archive;
-the SDK Update is required for the current build guard. See [BUILDING](BUILDING.md).
+Windows 10/11 x64. Requires a local TeX Live or MiKTeX installation. The Windows
+packages are unsigned. Save work and close TeXline before updating. The installer
+preserves user settings and keeps the previous executable for rollback.

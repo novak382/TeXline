@@ -56,7 +56,8 @@ public:
   explicit Reveal(QWidget *owner) : QWidget(owner), tick(this) {
     setObjectName(QStringLiteral("researchArrivalVeil"));
     setAttribute(Qt::WA_TransparentForMouseEvents);setAttribute(Qt::WA_NoSystemBackground);
-    setAttribute(Qt::WA_OpaquePaintEvent);
+    // The deadline may hide this child during an offscreen/native paint.
+    // Keep the live owner beneath it valid for that same frame.
     tick.setInterval(16);tick.setTimerType(Qt::PreciseTimer);
     connect(&tick,&QTimer::timeout,this,[this]{if(clock.elapsed()>=duration)finish();else update();});hide();
     owner->installEventFilter(this);qApp->installEventFilter(this);

@@ -12,6 +12,8 @@
 
 TeXline 让正文成为界面的中心，文件仍是普通 LaTeX。使用本地 TeX 环境编译，通过 SyncTeX 往返源码与 PDF，无需注册账号。
 
+[10 月 28 日维护更新](docs/releases/2026-10-28.md)：修复幻灯片预览大小、页面对应与编辑状态。
+
 ## 留下正文，接着写。
 
 编辑全文，或只看当前章节。进入专注模式时，保留章节范围、选区与阅读位置。字体、行距可以自行调整，也可以开启打字机滚动。
@@ -51,12 +53,12 @@ TeXline 让正文成为界面的中心，文件仍是普通 LaTeX。使用本地
 ## 从一个文件开始
 
 1. 安装 [TeX Live](https://tug.org/texlive/) 或 [MiKTeX](https://miktex.org/)，提供编译引擎与宏包。
-2. 下载 [Windows 安装包](https://texline.dev/downloads/v1.0.0/TeXline-1.0.0-Setup-x64.exe) 或[便携 ZIP](https://texline.dev/downloads/v1.0.0/TeXline-1.0.0-Portable-x64.zip)，打开 `TeXline.exe`。
+2. 下载 [Windows 安装包](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Setup-x64.exe) 或[便携 ZIP](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Portable-x64.zip)，打开 `TeXline.exe`。
 3. 打开文件，或从模板开始。选择“编译”即可查看 PDF。
 
 安装包按当前用户安装，不改变文件关联，目前尚未签名。Git 功能需要另外安装 Git。
 
-[安装说明](docs/INSTALL.md) · [第一次写作](docs/FIRST-SESSION.md) · [版本与校验值](https://github.com/novak382/TeXline/releases/tag/v1.0.0) · [已知限制](docs/KNOWN-LIMITATIONS.md)
+[安装说明](docs/INSTALL.md) · [第一次写作](docs/FIRST-SESSION.md) · [版本与校验值](https://github.com/novak382/TeXline/releases/tag/v1.0.0-20261028) · [已知限制](docs/KNOWN-LIMITATIONS.md)
 
 ## 反馈与参与
 
@@ -71,6 +73,6 @@ TeXline 是 [TeXworks](https://github.com/TeXworks/texworks) 的独立衍生项�
 <details>
 <summary>重新构建 1.0</summary>
 
-[发布附件](https://github.com/novak382/TeXline/releases/tag/v1.0.0)含应用源码、校验值、基础 RebuildKit 和包含已修改 Qt 源码的 1.0.0 SDK 更新包。重建时需要**两份 SDK 归档**，步骤与验证边界见[构建说明](docs/BUILDING.md)。
+[发布附件](https://github.com/novak382/TeXline/releases/tag/v1.0.0-20261028)含应用源码、校验值、基础 RebuildKit 和包含已修改 Qt 源码的 1.0.0 SDK 更新包。重建时需要**两份 SDK 归档**，步骤与验证边界见[构建说明](docs/BUILDING.md)。
 
 </details>

@@ -56,6 +56,8 @@ function OpenExistingFile(FileName: String; Access, Share, Security,
   external 'CreateFileW@kernel32.dll stdcall';
 function CloseNativeHandle(Handle: LongWord): Boolean;
   external 'CloseHandle@kernel32.dll stdcall';
+function NativeFileError(): LongWord;
+  external 'GetLastError@kernel32.dll stdcall';
 function SetNativeFrameAttribute(Handle, Attribute: LongWord; var Value: LongWord;
   Size: LongWord): LongInt;
   external 'DwmSetWindowAttribute@dwmapi.dll stdcall delayload';
@@ -90,7 +92,7 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Existing, Backup, Digest, Folder: String;
-  Handle: LongWord;
+  Handle, AccessError: LongWord;
 begin
   Result := '';
   Folder := ExpandConstant('{app}');
@@ -106,7 +108,12 @@ begin
   end;
   Handle := OpenExistingFile(Existing, $C0000000, 0, 0, 3, 128, 0);
   if Handle = $FFFFFFFF then begin
-    Result := 'TeXline is in use. Close your own TeXline session, then retry. No process was closed.';
+    AccessError := NativeFileError();
+    Log('Existing executable access failed: ' + IntToStr(AccessError));
+    if (AccessError = 32) or (AccessError = 33) then
+      Result := 'The TeXline file is in use. Close TeXline and wait a moment, then retry. No process was closed.'
+    else
+      Result := 'Could not update TeXline: ' + SysErrorMessage(AccessError) + ' Choose a writable installation folder, or retry after resolving the file access error.';
     Exit;
   end;
   CloseNativeHandle(Handle);

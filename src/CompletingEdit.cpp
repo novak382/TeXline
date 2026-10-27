@@ -3,6 +3,7 @@
 #include "ResearchAuthoring.h"
 #include "ResearchWritingContext.h"
 #include "ResearchSettings.h"
+#include <QPointer>
 #include <QScopeGuard>
 /*
 	This is part of TeXworks, an environment for working with TeX documents
@@ -639,8 +640,18 @@ void CompletingEdit::resetExtraSelections()
 	setExtraSelections(selections);
 }
 
-void CompletingEdit::undo() { if(!Research::sourceHistory(this,false))QTextEdit::undo(); }
-void CompletingEdit::redo() { if(!Research::sourceHistory(this,true))QTextEdit::redo(); }
+void CompletingEdit::undo() {
+  const bool slide=window()->property("researchSlideMode").toBool()&&property("researchSourceSlice").toBool();const auto previous=property("researchSlideScopeTransaction");
+  if(slide)setProperty("researchSlideScopeTransaction",true);
+  const auto scope=qScopeGuard([guard=QPointer<CompletingEdit>(this),slide,previous]{if(guard&&slide)guard->setProperty("researchSlideScopeTransaction",previous);});
+  if(!Research::sourceHistory(this,false))QTextEdit::undo();
+}
+void CompletingEdit::redo() {
+  const bool slide=window()->property("researchSlideMode").toBool()&&property("researchSourceSlice").toBool();const auto previous=property("researchSlideScopeTransaction");
+  if(slide)setProperty("researchSlideScopeTransaction",true);
+  const auto scope=qScopeGuard([guard=QPointer<CompletingEdit>(this),slide,previous]{if(guard&&slide)guard->setProperty("researchSlideScopeTransaction",previous);});
+  if(!Research::sourceHistory(this,true))QTextEdit::redo();
+}
 
 void CompletingEdit::keyPressEvent(QKeyEvent *e)
 {

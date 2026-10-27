@@ -48,6 +48,7 @@ const QList<CommandDefinition> &commandDefinitions() {
     {"researchLineEdit0","edit","移动行 move line"},{"researchLineEdit1","edit","移动行 move line"},
     {"researchLineEdit2","edit","复制行 duplicate line"},{"researchLineEdit3","edit","删除行 delete line"},
     {"researchLineEdit4","edit","注释 comment"},{"researchShowCompletion","edit","补全 suggestions"},
+    {"researchTikzDrawing","search","TikZ 绘图 画图 几何 平面 空间 函数 曲线 节点 连线 流程图 drawing geometry 3D graph curve nodes flowchart","以点选、拖动和构造绘制 TikZ 图","Draw TikZ figures with points, dragging and constructions","画个图|画流程图|空间曲线|绘制几何图|draw a diagram|draw geometry"},
     {"researchPictureGroup","insert","多图 子图 排列 裁剪 图片 subfigure images crop layout","排列一组图片并编辑标题与裁剪","Arrange a group of images, captions and crops","四张图|图片并排|多图排版|arrange pictures"},{"researchFormulaStructure","insert","公式 矩阵 分段 对齐 matrix cases align","编辑矩阵、分段函数与多行公式","Edit matrices, cases and aligned equations","矩阵加一列|公式对齐|分段函数|edit matrix"},{"researchSlideReveal","search","幻灯片 逐步显示 步骤 overlay uncover pause","设置内容在第几步出现与结束","Set when slide content appears and disappears","第二步出现|逐条显示|reveal steps"},{"researchInsertFigure","insert","图片 image figure"},{"researchInsertTable","insert","表格 table"},
     {"researchInsertCitation","insert","文献 引用 citation bibliography","关联文献文件，选择条目并插入引用","Link a bibliography, choose a reference and cite it","插入文献|引用论文|加一条引用|关联文献|cite a paper|insert a reference"},{"researchInsertFootnote","insert","脚注 footnote"},
     {"researchWrapQuotation","insert","引文 quotation"},{"researchSaveSnippet","insert","添加片段 缩写 速记 snippet shorthand"},

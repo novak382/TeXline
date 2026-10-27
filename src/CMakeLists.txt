@@ -18,6 +18,7 @@ set(TEXWORKS_SRCS BibTeXFile.cpp
   ResearchProjectOperations.cpp
                   ResearchEnvironment.cpp
                   ResearchAuthoring.cpp
+                  ResearchTikz.cpp
                   ResearchSourceHistory.cpp
                   ResearchStart.cpp
                   ResearchArticle.cpp

@@ -983,3 +983,33 @@ Use private settings, independent samples and an inactive Windows desktop. New f
 - `project-search-flow-test`: automatic query, cancellation/IME composition and retained replace preview/undo.
 
 The focused release verification covers these changed workflows and affected regressions at three locales and effective 100/125/150/200%, including normal/focus and half-width layouts. A fixture source or successful compile alone is not a runtime pass; use the recorded candidate identity and assertion receipts. Pair performance on the same frozen sample/settings without concurrent builds. Physical IME, mouse, foreground composition, cloud clients and new-user trials remain separate human acceptance. This focused verification does not claim the entire repository test suite.
+
+
+## Session-scoped native preview reuse (2026-10-24)
+
+`preview-reuse-test` runs actual pdfLaTeX, XeLaTeX, LuaLaTeX and latexmk against independent files on an inactive desktop. It checks one-pass warm previews, content-hashed style invalidation despite preserved size/time, changed equation references, exact PDF rasters against fresh compilation, cancellation, missing files, syntax errors, damaged auxiliary fallback, bibliography-tool requests, Beamer overlays and session cleanup. A first biblatex build can need a third TeX pass to settle its auxiliary digest; a Biber request itself must not cause futile repeated TeX runs.
+
+`preview-compile-perf-test` records preparation, compiler and publication separately, plus real automatic table-preview readiness including the unchanged 450 ms debounce and rendering. Use the same `TEXLINE_COMPILE_PERF_ROOT`, private distribution/font caches and settings for serial ABBA runs; capture images only after timed samples. Cold means a new preview session, not a cold OS cache. Preserve failed fixture receipts separately. Pair with `authoring-auto-test`, `visual-structures-test`, `slide-export-safety-test` and the ordinary build/publication cases. Physical IME, foreground compositor timing and arbitrary third-party classes are separate acceptance.
+
+## TikZ visual construction
+
+`tikz-editing-test` checks supported source patches, preservation of unknown source, geometry relationships, cross-file package undo, stale drafts, command search, cancellation and the expired-arrival paint. `tikz-reconstruction-test` constructs points, hidden edges, triangles, circles, conics, cubic controls, clipping and hatching through actual widgets. A private optional `reference-tikz.tex` enables an unchanged-source comparison. `tikz-spatial-test` checks real XYZ data, orthographic view changes, radius scaling, line/ray/vector/plane constructions, three-coordinate parametric curves, canvas dragging and one-step undo. Use inactive desktops, private settings and independent manuscripts. Cover en/zh_CN/zh_TW, effective 100/125/150/200%, half-width and focus; widget-event automation does not certify physical pointer, IME, compositor or first-time-user acceptance.
+
+## Ordinary conic tangents
+
+`tikz-conic-tangent-test` constructs an ellipse and two external tangents from
+a blank native canvas. It checks candidate cancellation, fixed branches, label
+movement, one-step undo, parameter edits, reopen/Cancel/focus, actual TeX
+preview and independent PGF anchors. Model cases cover through-circles, custom
+coordinate bases, nonuniform and mirrored scale, source order and unsafe
+branch separation. Capture the dimension inputs after scrolling them into view
+on narrow windows; text-fit assertions alone do not establish visual quality.
+The private desktop guard is mandatory; synthetic Qt pointer events do not
+verify physical pointer or compositor frame rate.
+
+`tikz-external-tangent-test` adds exact quadratic parametric contacts, D082
+analytic oracles, custom axes and mirrors, zero/symmetric roots, small-curvature
+rejection, intermediate PGF overflow, existing multiline declarations, actual
+PGF anchors and native from-blank external selection. Continuous cancellation
+then conic-point tangents checks that branch state does not leak. All130 exact
+figure reconstructions and arbitrary-function roots are separate work.

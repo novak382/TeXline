@@ -44,6 +44,7 @@
     while(refs.hasNext()){const auto m=refs.next();const int group=m.captured(4).isEmpty()?2:5;auto keys=m.captured(group).split(QLatin1Char(','));for(auto &key:keys)if(renamed.contains(key.trimmed()))key=renamed.value(key.trimmed());changes.append({int(m.capturedStart(group)),int(m.capturedLength(group)),keys.join(QLatin1Char(','))});}
     for(int n=int(changes.size())-1;n>=0;--n)content.replace(changes[n].at,changes[n].length,changes[n].value);
     if(at>0&&original[at-1]!=QLatin1Char('\n'))content.prepend(QLatin1Char('\n'));
+    SlideSourceEdit sourceEdit(target);
     auto cursor=target->textCursor();cursor.beginEditBlock();cursor.setPosition(at);cursor.insertText(content);cursor.endEditBlock();cursor.setPosition(at);target->editor()->setTextCursor(cursor);editTarget=target;preferredFile=file;preferredStart=at+qMax(0,int(content.size())-2);
     lastPasteTarget=target;lastPasteView=view;lastPasteRevision=target->textDoc()->revision();lastPasteRow=view->currentRow();lastPasteRange=QTextCursor(target->textDoc());lastPasteRange.setPosition(at);lastPasteRange.setPosition(at+int(content.size()),QTextCursor::KeepAnchor);parseTimer.start(0);
   }

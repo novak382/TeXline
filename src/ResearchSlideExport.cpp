@@ -3,6 +3,7 @@
 #include "ResearchProject.h"
 #include "ResearchWorkflow.h"
 #include "ResearchAppearance.h"
+#include "TWApp.h"
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -11,6 +12,10 @@
 #include <QSaveFile>
 #include <QTemporaryDir>
 #include <QElapsedTimer>
+#include <QProcessEnvironment>
+#include <QDateTime>
+#include <QSet>
+#include <mutex>
 #include <vector>
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -21,6 +26,7 @@ namespace {
 // If any alias cannot be removed, retain the private temporary directory.
 struct ExportAliasCleanup {
  QTemporaryDir &temp;
+ explicit ExportAliasCleanup(QTemporaryDir &directory):temp(directory){}
  ~ExportAliasCleanup() {
 #ifdef Q_OS_WIN
   const QDir aliases(temp.path()+QStringLiteral("/search-paths"));
@@ -37,6 +43,7 @@ struct ExportAliasCleanup {
  }
 };
 }
+#include "ResearchPreviewCompile.inc"
 QByteArray slideExportHash(const QString &file){QFile f(file);if(!f.exists())return {};if(!f.open(QIODevice::ReadOnly))return QByteArray("unreadable");QCryptographicHash h(QCryptographicHash::Sha256);if(!h.addData(&f))return QByteArray("unreadable");return h.result();}
 QString localizedSlideExportError(const QString &error,bool english) {
  if(!english&&!traditionalUi())return error;
@@ -76,11 +83,9 @@ QString slideProfileSource(QString source,int profile){
  source.insert(at,first+settings+last);return source;
 }
 SlideExportResult exportSlideCopies(const SlideExportRequest &r,const std::shared_ptr<std::atomic_bool> &cancel){
- SlideExportResult result;auto stop=[&]{if(!cancel->load())return false;result.cancelled=true;return true;};
+ SlideExportResult result;QElapsedTimer phase;phase.start();auto stop=[&]{if(!cancel->load())return false;result.cancelled=true;return true;};
  if(!r.engine.supportsLocalBuild()||!r.engine.isAvailable()){result.error=QStringLiteral("请选择可用的 pdfLaTeX、XeLaTeX、LuaLaTeX 或 latexmk 引擎。");return result;}
  if(r.profiles.isEmpty()||r.profiles.size()!=r.destinations.size()){result.error=QStringLiteral("导出文件配置不完整。");return result;}
- QTemporaryDir temp(QDir::tempPath()+QStringLiteral("/texline-export-XXXXXX"));if(!temp.isValid()){result.error=QStringLiteral("无法创建导出副本。");return result;}
- ExportAliasCleanup aliasCleanup{temp};
  auto sources=r.sources;if(!sources.contains(r.root)){QFile f(r.root);if(!f.open(QIODevice::ReadOnly)){result.error=f.errorString();return result;}sources.insert(r.root,QString::fromUtf8(f.readAll()));}
  QStringList files=buildDependencies(r.root,sources);for(const auto &file:r.extraDependencies){const auto path=QFileInfo(file).canonicalFilePath();if(!path.isEmpty()&&!files.contains(path))files.append(path);}for(auto it=sources.cbegin();it!=sources.cend();++it)if(!files.contains(it.key()))files.append(it.key());
  // Literal graphicspath entries are needed before a first recorder file exists.
@@ -89,17 +94,79 @@ SlideExportResult exportSlideCopies(const SlideExportRequest &r,const std::share
  for(auto it=sources.cbegin();it!=sources.cend();++it){auto graphics=QRegularExpression(QStringLiteral(R"(\\includegraphics\*?\s*(?:\[[^\]]*\]\s*)?\{([^{}]+)\})")).globalMatch(maskProjectText(it.value()));while(graphics.hasNext()){const auto name=graphics.next().captured(1);if(name.contains(QLatin1Char('\\')))continue;QStringList names{name};if(QFileInfo(name).suffix().isEmpty())for(const auto &ext:{QStringLiteral("pdf"),QStringLiteral("png"),QStringLiteral("jpg"),QStringLiteral("jpeg")})names<<name+QLatin1Char('.')+ext;for(const auto &directory:graphicsDirs)for(const auto &candidate:names){QFileInfo info(QDir(directory).filePath(candidate));if(info.isFile()&&!files.contains(info.canonicalFilePath()))files<<info.canonicalFilePath();}}}
  // Retain directory relationships for relative inputs, including ../shared.
  QString common=QFileInfo(r.root).absolutePath();for(const auto &file:files){while(QDir(common).relativeFilePath(file).startsWith(QStringLiteral("../"))){QDir parent(common);if(!parent.cdUp())break;common=parent.absolutePath();}}
+ // A session is owned by one transient editor. Concurrent callers fall back
+ // to independent cold copies rather than blocking or sharing mutable state.
+ SlidePreviewSession::State *session=nullptr;std::unique_lock<std::mutex> sessionLock;
+ if(r.previewSession&&r.profiles==QList<int>{0}){
+  sessionLock=std::unique_lock<std::mutex>(r.previewSession->state->mutex,std::try_to_lock);
+  if(sessionLock.owns_lock())session=r.previewSession->state.get();
+ }
+ std::unique_ptr<QTemporaryDir> cold;
+ if(session){
+  QCryptographicHash key(QCryptographicHash::Sha256);hashField(key,r.root.toUtf8());hashField(key,common.toUtf8());
+  const QFileInfo executable(TWApp::instance()->findProgram(r.engine.program(),Engine::binPaths()));
+  hashField(key,executable.canonicalFilePath().toUtf8());hashField(key,QByteArray::number(executable.size()));hashField(key,QByteArray::number(executable.lastModified().toMSecsSinceEpoch()));
+  hashField(key,r.engine.arguments().join(QChar(0)).toUtf8());
+  auto environment=QProcessEnvironment::systemEnvironment().toStringList();environment.sort();hashField(key,environment.join(QChar(0)).toUtf8());
+  auto ordered=files;ordered.sort();
+  for(const auto &file:ordered){
+   if(stop())return result;hashField(key,file.toUtf8());
+   if(file==r.root){const auto text=sources.value(file);const auto begin=QRegularExpression(QStringLiteral(R"(\\begin\s*\{document\})")).match(maskProjectText(text));hashField(key,(begin.hasMatch()?text.left(begin.capturedStart()):text).toUtf8());}
+   else {const auto digest=sources.contains(file)?QCryptographicHash::hash(sources.value(file).toUtf8(),QCryptographicHash::Sha256):slideExportHash(file);hashField(key,digest);}
+  }
+  const auto identity=key.result();
+  const bool reusable=session->valid&&session->folder&&session->folder->isValid()&&session->identity==identity&&session->inputsUnchanged();
+  if(!reusable){session->clear();session->folder=std::make_unique<QTemporaryDir>(QDir::tempPath()+QStringLiteral("/texline-export-XXXXXX"));session->identity=identity;}
+  result.reusedWorkspace=reusable;session->valid=false;
+ }else cold=std::make_unique<QTemporaryDir>(QDir::tempPath()+QStringLiteral("/texline-export-XXXXXX"));
+ auto &temp=session?*session->folder:*cold;
+ if(!temp.isValid()){result.error=QStringLiteral("无法创建导出副本。");return result;}
+ // Retained aliases belong to this session and are detached on reset/destruction.
+ std::unique_ptr<ExportAliasCleanup> aliasCleanup;if(!session)aliasCleanup=std::make_unique<ExportAliasCleanup>(temp);
  QHash<QString,QString> copies;
  for(const auto &file:files){if(stop())return result;const auto relative=QDir(common).relativeFilePath(file);if(QDir::isAbsolutePath(relative)||relative.startsWith(QStringLiteral("../"))){result.error=QStringLiteral("依赖文件位于不同磁盘，请将讲稿资源放到同一项目后导出。");return result;}copies.insert(file,temp.path()+QStringLiteral("/source/")+relative);}
  for(const auto &destination:r.destinations){const auto absolute=QFileInfo(destination).absoluteFilePath();if(files.contains(QFileInfo(destination).canonicalFilePath())||absolute==QFileInfo(r.root).absolutePath()+QLatin1Char('/')+QFileInfo(r.root).completeBaseName()+QStringLiteral(".pdf")||absolute==previewFile(r.root)){result.error=QStringLiteral("请选择独立的文件名，避免替换讲稿资源或当前预览。");return result;}}
- for(const auto &file:files){if(stop())return result;const auto dest=copies.value(file);if(!QDir().mkpath(QFileInfo(dest).absolutePath())){result.error=QStringLiteral("无法准备导出目录。");return result;}if(sources.contains(file)){auto text=sources.value(file);for(auto it=copies.cbegin();it!=copies.cend();++it)text.replace(it.key(),it.value());QFile f(dest);if(!f.open(QIODevice::WriteOnly)||f.write(text.toUtf8())<0){result.error=f.errorString();return result;}}else if(!QFile::copy(file,dest)){result.error=QStringLiteral("无法复制依赖：%1").arg(file);return result;}}
+ for(const auto &file:files){if(stop())return result;const auto dest=copies.value(file);if(!QDir().mkpath(QFileInfo(dest).absolutePath())){result.error=QStringLiteral("无法准备导出目录。");return result;}if(sources.contains(file)){auto text=sources.value(file);for(auto it=copies.cbegin();it!=copies.cend();++it)text.replace(it.key(),it.value());QFile f(dest);if(!f.open(QIODevice::WriteOnly)||f.write(text.toUtf8())<0){result.error=f.errorString();return result;}}else if(!(result.reusedWorkspace&&QFileInfo::exists(dest))&&!QFile::copy(file,dest)){result.error=QStringLiteral("无法复制依赖：%1").arg(file);return result;}}
+ if(session){session->copies.clear();for(const auto &dest:copies){const auto digest=slideExportHash(dest);if(digest.size()!=32){result.error=QStringLiteral("无法复制依赖：%1").arg(dest);return result;}session->copies.insert(dest,digest);}}
  const auto input=copies.value(r.root);QFile base(input);if(!base.open(QIODevice::ReadOnly)){result.error=base.errorString();return result;}const auto original=QString::fromUtf8(base.readAll());base.close();QStringList outputs;
+ result.preparationMs=phase.nsecsElapsed()/1e6;phase.restart();
  for(int n=0;n<r.profiles.size();++n){if(stop())return result;const auto source=slideProfileSource(original,r.profiles[n]);if(source.isEmpty()){result.error=QStringLiteral("请检查导言中的放映设置块或 document 环境。");return result;}QFile f(input);if(!f.open(QIODevice::WriteOnly|QIODevice::Truncate)||f.write(source.toUtf8())<0){result.error=f.errorString();return result;}f.close();
   const auto out=temp.path()+QStringLiteral("/output-%1").arg(n);QDir().mkpath(out);for(const auto &file:files){const auto rel=QDir(QFileInfo(r.root).absolutePath()).relativeFilePath(file);if(!rel.startsWith(QStringLiteral("../")))QDir().mkpath(QFileInfo(QDir(out).filePath(rel)).absolutePath());}
-  const int passes=QFileInfo(r.engine.program()).completeBaseName().compare(QStringLiteral("latexmk"),Qt::CaseInsensitive)==0?1:2;
-  for(int pass=0;pass<passes;++pass){Engine engine=r.engine;std::unique_ptr<QProcess> process(engine.run(QFileInfo(input),nullptr,out));if(!process){result.error=QStringLiteral("无法启动编译引擎。");return result;}QElapsedTimer elapsed;elapsed.start();while(!process->waitForFinished(100)){result.log+=QString::fromLocal8Bit(process->readAll());if(result.log.size()>200000)result.log=result.log.right(200000);if(stop()||elapsed.elapsed()>300000){Engine::stop(process.get());process->waitForFinished(5000);if(!result.cancelled)result.error=QStringLiteral("导出编译超时。");return result;}if(process->state()==QProcess::NotRunning)break;}result.log+=QString::fromLocal8Bit(process->readAll());if(process->exitStatus()!=QProcess::NormalExit||process->exitCode()!=0||process->error()==QProcess::FailedToStart){result.error=QStringLiteral("导出编译失败。原稿和已有 PDF 未改动，请查看下方日志。");return result;}}
+  const bool latexmk=QFileInfo(r.engine.program()).completeBaseName().compare(QStringLiteral("latexmk"),Qt::CaseInsensitive)==0;
+  const int passes=latexmk?1:(session?5:2);
+  auto previous=session&&!latexmk?previewAuxiliaryState(out):QByteArray();bool stable=!session||latexmk;
+  auto coldFallback=[&]{
+   const double discardedMs=double(phase.nsecsElapsed())/1e6;auto coldRequest=r;coldRequest.previewSession.reset();auto coldResult=exportSlideCopies(coldRequest,cancel);
+   coldResult.preparationMs+=result.preparationMs;coldResult.compilationMs+=discardedMs;coldResult.enginePasses+=result.enginePasses;
+   return coldResult;
+  };
+  for(int pass=0;pass<passes;++pass){
+   ++result.enginePasses;Engine engine=r.engine;std::unique_ptr<QProcess> process(engine.run(QFileInfo(input),nullptr,out));
+   if(!process){result.error=QStringLiteral("无法启动编译引擎。");return result;}
+   QElapsedTimer elapsed;elapsed.start();QString passLog;
+   while(!process->waitForFinished(100)){
+    passLog+=QString::fromLocal8Bit(process->readAll());if(passLog.size()>200000)passLog=passLog.right(200000);
+    if(stop()||elapsed.elapsed()>300000){Engine::stop(process.get());process->waitForFinished(5000);if(!result.cancelled)result.error=QStringLiteral("导出编译超时。");return result;}
+    if(process->state()==QProcess::NotRunning)break;
+   }
+   passLog+=QString::fromLocal8Bit(process->readAll());result.log+=passLog;if(result.log.size()>200000)result.log=result.log.right(200000);
+   if(stop())return result;
+   if(process->exitStatus()!=QProcess::NormalExit||process->exitCode()!=0||process->error()==QProcess::FailedToStart){
+    // A retained auxiliary file may be damaged. Retry from a fresh independent
+    // copy once; never mask a source error or replace an existing destination.
+    if(session&&result.reusedWorkspace)return coldFallback();
+    result.error=QStringLiteral("导出编译失败。原稿和已有 PDF 未改动，请查看下方日志。");return result;
+   }
+   if(session&&!latexmk){
+    const auto next=previewAuxiliaryState(out);
+    if(!next.isEmpty()&&next==previous&&!previewNeedsRerun(passLog)){stable=true;break;}
+    if(next.isEmpty())return coldFallback();previous=next;
+   }
+  }
+  if(!stable)return coldFallback();
   const auto pdf=out+QLatin1Char('/')+QFileInfo(input).completeBaseName()+QStringLiteral(".pdf");QFile output(pdf);if(!output.open(QIODevice::ReadOnly)||output.read(5)!=QByteArray("%PDF-")){result.error=QStringLiteral("编译未生成有效的 PDF。");return result;}outputs.append(pdf);
  }
+ result.compilationMs=phase.nsecsElapsed()/1e6;phase.restart();
  if(stop())return result;
  for(const auto &dest:r.destinations)if(slideExportHash(dest)!=r.destinationHashes.value(dest)){result.error=QStringLiteral("目标文件在导出期间发生变化，未覆盖：%1").arg(dest);return result;}
  // Prepare every output before replacing any existing file. An unavailable
@@ -123,6 +190,12 @@ SlideExportResult exportSlideCopies(const SlideExportRequest &r,const std::share
  // a cancellation that hides already written files. Commit failures still
  // report the precise subset that succeeded; this is not a multi-file transaction.
  for(int n=0;n<outputs.size();++n){if(!pending[n]->commit()){result.error=QStringLiteral("无法保存：%1\n%2").arg(r.destinations[n],pending[n]->errorString());return result;}result.written.append(r.destinations[n]);}
+ if(session){
+  // Recorder inputs outside the private copy (formats/fonts/distribution files)
+  // are content-checked before reuse, not trusted by timestamps alone.
+  session->valid=session->recordInputs(temp.path()+QStringLiteral("/output-0/")+QFileInfo(input).completeBaseName()+QStringLiteral(".fls"),QFileInfo(input).absolutePath());
+ }
+ result.publicationMs=phase.nsecsElapsed()/1e6;
  return result;
 }
 }

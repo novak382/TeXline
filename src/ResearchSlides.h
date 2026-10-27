@@ -17,6 +17,7 @@ struct SlideFrame {
   QString section;
   bool backup{false};
   bool titlePage{false};
+  bool sliceable{false}; // A complete source-line range; independent of structural edit permission.
 };
 struct SlideDeck {
   struct Landmark { QString title,file; int line{1}; };

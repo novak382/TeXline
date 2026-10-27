@@ -1,6 +1,7 @@
 // Temporary research tools operating on ordinary TeX, without another document model.
 // GPL-2.0-or-later.
 #include "ResearchAuthoring.h"
+#include "ResearchTikz.h"
 #include "ResearchOnboarding.h"
 #include "ResearchBibliography.h"
 #include "ResearchWorkspaceUi.h"
@@ -220,17 +221,18 @@ protected:QString textFromValue(double value)const override{auto text=QDoubleSpi
 // normal build cache or its PDF; cancellation only stops this private job.
 class DraftPreview final : public QObject {
   QPointer<PreviewImage> image;QPointer<QLabel> notice;QPointer<QPushButton> trigger;std::shared_ptr<std::atomic_bool> cancel{std::make_shared<std::atomic_bool>(false)};quint64 generation{0};
+  std::shared_ptr<SlidePreviewSession> previewSession{std::make_shared<SlidePreviewSession>()};
   QVector<QImage> pages;bool running{false};std::function<void()> pending;
   void retry(bool failed){if(trigger&&trigger->property("researchRetryOnly").toBool()){trigger->setText(words("重试","Retry"));trigger->setVisible(failed);}}
 public:
   std::function<void(int)> pagesReady;
   void showPage(int page){if(image&&page>=0&&page<pages.size())image->setImage(pages[page]);}
   DraftPreview(PreviewImage *i,QLabel *n,QPushButton *b):QObject(i),image(i),notice(n),trigger(b){}
-  ~DraftPreview()override{cancel->store(true);}
+  ~DraftPreview()override{cancel->store(true);auto retired=std::move(previewSession);QThreadPool::globalInstance()->start(QRunnable::create([retired]{}));}
   void invalidate(bool clear=false){cancel->store(true);pending={};++generation;pages.clear();retry(false);if(trigger)trigger->setEnabled(true);if(image){if(clear)image->reset(words("草稿已更改","Draft changed"));image->setProperty("researchDraftReady",false);}}
   void start(TeXDocumentWindow *w,const QString &draft,const QStringList &packages,bool allSteps=false,QSharedPointer<QTemporaryDir> assets={}) {
     invalidate();if(running){QPointer<TeXDocumentWindow> owner(w);pending=[this,owner,draft,packages,allSteps,assets]{if(owner)start(owner,draft,packages,allSteps,assets);};return;}if(w->untitled()){notice->setText(words("保存文稿后可使用项目预览。","Save the document to preview with its project settings."));retry(true);return;}
-    SlideExportRequest request;request.root=QFileInfo(rootOf(w)).canonicalFilePath();request.sources=sourceBuffers();request.engine=TWApp::instance()->getNamedEngine(w->researchEngineName());
+    SlideExportRequest request;request.previewSession=previewSession;request.root=QFileInfo(rootOf(w)).canonicalFilePath();request.sources=sourceBuffers();request.engine=TWApp::instance()->getNamedEngine(w->researchEngineName());
     // Preview never opts into external commands, even if the normal build does.
     auto args=request.engine.arguments();for(int i=args.size()-1;i>=0;--i)if(args[i].contains(QStringLiteral("shell-escape"))||args[i].contains(QStringLiteral("enable-write18")))args.removeAt(i);args.prepend(QStringLiteral("-no-shell-escape"));request.engine.setArguments(args);
     const auto rootSource=sourceOf(request.root,request.sources);const auto begin=QRegularExpression(QStringLiteral(R"(\\begin\s*\{document\})")).match(maskProjectText(rootSource));
@@ -422,6 +424,8 @@ QString previewAssetReference(const QString &file,const QByteArray &expected,QSh
   return QStringLiteral("\\detokenize{")+path+QLatin1Char('}');
 }
 
+void openTikz(TeXDocumentWindow *,bool,const AuthoringSpan &,const QString &seed=QString(),const SourceEdit *inherited=nullptr);
+
 class ObjectDialog final : public MaterialDialog {
   SourceEdit edit;QString originalDraft,baseDraft,chosenAsset,assetOriginal;QByteArray assetHash;QStringList packages;bool tableMode{false},newObject{false},syncing{false},sourceOnly{false};
   QSharedPointer<QTemporaryDir> clipboardImage,previewAssets;
@@ -467,7 +471,7 @@ class ObjectDialog final : public MaterialDialog {
       if(!position->currentData().toString().isEmpty())draft.replace(QRegularExpression(QStringLiteral(R"((\\begin\s*\{figure\*?\})\s*(?:\[[^\]]*\])?)")),QStringLiteral("\\1[")+position->currentData().toString()+QLatin1Char(']'));
       changed(draft);};
     connect(width,qOverload<double>(&QDoubleSpinBox::valueChanged),this,[update]{update();});connect(figureCaption,&QPlainTextEdit::textChanged,this,[update]{update();});connect(label,&QLineEdit::textChanged,this,[update]{update();});connect(position,qOverload<int>(&QComboBox::currentIndexChanged),this,[update]{update();});connect(figureAlignment,qOverload<int>(&QComboBox::currentIndexChanged),this,[update]{update();});connect(clip,&QCheckBox::toggled,this,[update]{update();});for(auto *value:trim)connect(value,qOverload<double>(&QDoubleSpinBox::valueChanged),this,[this,update]{if(std::any_of(trim.begin(),trim.end(),[](auto *v){return v->value()>0;})){QSignalBlocker b(clip);clip->setChecked(true);}update();});
-    connect(origin,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,choose,fileName,update](int at){choose->setEnabled(at==0);fileName->setEnabled(at==0);width->setEnabled(at==0);update();if(at==1){tabs->setCurrentIndex(1);notice->setText(words("在源码中编辑绘图，再预览。","Edit the drawing in source, then preview."));}});
+    connect(origin,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,choose,fileName,update](int at){if(at==1){const auto target=edit.target;const SourceEdit snapshot=edit;const bool insert=newObject;const AuthoringSpan span{QStringLiteral("figure"),edit.start,edit.end};QString draft=QStringLiteral("\\begin{figure}[htbp]\n\\centering\n")+Tikz::emptyPicture()+QStringLiteral("\n\\end{figure}");draft=setCommand(draft,QStringLiteral("caption"),captionText());draft=setCommand(draft,QStringLiteral("label"),label->text());reject();if(target)openTikz(target,insert,span,draft,&snapshot);return;}choose->setEnabled(true);fileName->setEnabled(true);width->setEnabled(true);update();});
     connect(choose,&QToolButton::clicked,this,[this,fileName,update]{QPointer<ObjectDialog> guard(this);const auto selected=QFileDialog::getOpenFileName(this,words("选择图片","Choose image"),QFileInfo(rootOf(edit.target)).absolutePath(),QStringLiteral("Images (*.pdf *.png *.jpg *.jpeg)"));if(!guard||selected.isEmpty())return;chosenAsset=selected;assetHash=slideExportHash(selected);fileName->setText(QFileInfo(selected).fileName());fileName->setToolTip(selected);update();showAsset();});
     if(!newObject&&!parsed.valid){sourceOnly=true;form->setEnabled(false);tabs->setCurrentIndex(1);notice->setText(words("此图含自定义排版，请直接编辑源码并预览。","This figure uses custom layout. Edit its source and preview."));}
     layout->addStretch();if(drawing)packages={QStringLiteral("tikz")};else packages={QStringLiteral("graphicx")};showAsset();
@@ -589,11 +593,15 @@ protected:
   void resizeEvent(QResizeEvent *event)override{MaterialDialog::resizeEvent(event);updateWorkbench();}
 };
 
+#include "ResearchTikzWorkbench.inc"
+
 void openObject(TeXDocumentWindow *w,bool table,bool inserting) {
   if(!w||w->editor()->isReadOnly())return;
+  if(auto *drawing=w->findChild<QDialog*>(QStringLiteral("researchTikzDialog"))){drawing->show();drawing->raise();return;}
   if(auto *existing=w->findChild<QDialog*>(QStringLiteral("researchObjectDialog"))){existing->show();existing->raise();existing->activateWindow();return;}
   const auto span=authoringObjectAt(w->textDoc()->editorText(),w->cursorPosition());
   if(!inserting&&(!span.valid()||objectFamily(span.kind)!=(table?QStringLiteral("table"):QStringLiteral("figure")))){showTransientStatusMessage(w,words("将光标放在要编辑的图或表中。","Place the cursor inside the figure or table to edit."));return;}
+  if(!table&&!inserting&&Tikz::parse(w->textDoc()->editorText().mid(span.start,span.end-span.start)).valid){openTikz(w,false,span);return;}
   (new ObjectDialog(w,table,inserting,span))->show();
 }
 
@@ -824,6 +832,7 @@ void installResearchAuthoring(TeXDocumentWindow *window) {
   auto *edit=window->findChild<QMenu*>(QStringLiteral("researchEditMenu"));if(!edit)return;auto *menu=window->findChild<QMenu*>(QStringLiteral("researchInsertMenu"));if(!menu)return;
   auto add=[window,menu](const char *name,const QString &text,const std::function<void()> &callback){auto *a=menu->addAction(text);a->setObjectName(QString::fromLatin1(name));QObject::connect(a,&QAction::triggered,window,callback);return a;};
   add("researchInsertFigure",words("图…","Figure…"),[window]{openObject(window,false,true);});add("researchPictureGroup",words("多图排版…","Arrange pictures…"),[window]{openPictures(window);});add("researchFormulaStructure",words("公式结构…","Formula structure…"),[window]{openStructure(window);});add("researchInsertTable",words("表…","Table…"),[window]{openObject(window,true,true);});add("researchInsertCitation",words("文献引用…","Citation…"),[window]{citation(window);});add("researchInsertFootnote",words("脚注","Footnote"),[window]{wrapSelection(window,true);});
+  auto *drawing=new QAction(words("绘图（TikZ）…","Drawing (TikZ)…"),window);drawing->setObjectName(QStringLiteral("researchTikzDrawing"));QObject::connect(drawing,&QAction::triggered,window,[window]{openTikz(window,true,{},Tikz::emptyPicture());});QObject::connect(TWApp::instance(),&TWApp::updatedTranslators,window,[drawing]{drawing->setText(words("绘图（TikZ）…","Drawing (TikZ)…"));});
   auto citationCaption=[window]{if(auto *a=window->findChild<QAction*>(QStringLiteral("researchInsertCitation")))a->setText(QFileInfo(window->fileName()).suffix().compare(QStringLiteral("bib"),Qt::CaseInsensitive)==0?words("管理文献…","Manage references…"):words("文献引用…","Citation…"));};
   QObject::connect(menu,&QMenu::aboutToShow,window,citationCaption);QObject::connect(window,&TeXDocumentWindow::activatedWindow,window,citationCaption);QTimer::singleShot(0,window,citationCaption);
   auto *reveal=new QAction(words("逐步显示…","Progressive reveal…"),window);reveal->setObjectName(QStringLiteral("researchSlideReveal"));edit->addAction(reveal);QObject::connect(reveal,&QAction::triggered,window,[window]{openReveals(window);});QObject::connect(edit,&QMenu::aboutToShow,window,[window,reveal]{reveal->setVisible(enclosingEnvironment(window->textDoc()->editorText(),window->cursorPosition(),{QStringLiteral("frame")}).valid());reveal->setEnabled(!window->editor()->isReadOnly());});

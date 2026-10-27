@@ -143,6 +143,13 @@ QString pretty(QString title) {
   title.remove(QLatin1Char('{'));title.remove(QLatin1Char('}'));
   return title.simplified();
 }
+// Suppress only controller-owned transient cursor/selection changes. Explicit
+// cross-scope selections still reveal the full source through the normal guard.
+struct SlideSourceEdit {
+  QPointer<CompletingEdit> editor;QVariant previous;
+  explicit SlideSourceEdit(TeXDocumentWindow *w){if(w){editor=w->editor();previous=editor->property("researchSlideScopeTransaction");editor->setProperty("researchSlideScopeTransaction",true);}}
+  ~SlideSourceEdit(){if(editor)editor->setProperty("researchSlideScopeTransaction",previous);}
+};
 struct Parser {
   SlideDeck deck;
   QString root;
@@ -155,6 +162,7 @@ struct Parser {
   int total{0};
   bool stop() { if(cancelled&&cancelled()){deck.cancelled=true;return true;}return false; }
   void unsure() { deck.uncertain=true; }
+#include "ResearchBeamerSource.inc"
   void file(const QString &name,int depth=0) {
     if(stop())return;
     const auto filename=path(name);
@@ -174,6 +182,7 @@ struct Parser {
     for(int p=0;p<s.size();) {
       if(stop())break;
       if(s[p]!=QLatin1Char('\\')) {
+        if(s[p]==QLatin1Char('{')&&braces==0&&envs==QStringList{QStringLiteral("document")}&&groupedFrame(filename,raw,s,p,depth))continue;
         if(s[p]==QLatin1Char('{'))++braces;
         if(s[p]==QLatin1Char('}')){if(--braces<0){unsure();braces=0;}}
         ++p;continue;
@@ -200,6 +209,10 @@ struct Parser {
         else if(cmd==QStringLiteral("newcommand")||cmd==QStringLiteral("renewcommand")||cmd==QStringLiteral("def")||cmd==QStringLiteral("newenvironment"))title=QStringLiteral("公共宏");
         if(!title.isEmpty()&&!landmarks.contains(title)){deck.document.append({title,filename,int(QStringView(raw).left(start).count(QLatin1Char('\n')))+1});landmarks.insert(title);}
       }
+      const bool literalTop=braces==0&&(envs.isEmpty()||envs==QStringList{QStringLiteral("document")});
+      if(declaration(cmd,s,p,filename,literalTop))continue;
+      if(templateCommand(cmd,s,p))continue;
+      if(frameMacros.contains(cmd)){if(!literalTop||conditionalDepth)unsure();else macroFrame(frameMacros.value(cmd),filename,raw,s,start,p,depth);continue;}
       if(cmd==QStringLiteral("includeonly")||cmd==QStringLiteral("includeonlyframes")||cmd==QStringLiteral("mode")||cmd==QStringLiteral("endinput")) unsure();
       QString env,opts,kind;
       if(cmd==QStringLiteral("begin")||cmd==QStringLiteral("end")) {
@@ -264,9 +277,10 @@ struct Parser {
       const bool inlineFrame=rangeStart!=lineStart||(rangeEnd==end&&nl>=0);
       const bool hasLabel=!label.isEmpty()||QRegularExpression(QStringLiteral(R"(\\(?:label|hypertarget|bibitem)(?![A-Za-z@]))")).match(body).hasMatch();
       const bool embeddedInput=QRegularExpression(QStringLiteral(R"(\\(?:input|include|subfile)(?![A-Za-z@]))")).match(body).hasMatch();
-      if(embeddedInput)unsure();
+      if(embeddedInput){auto inside=body;if(env==QStringLiteral("frame"))inside.remove(QRegularExpression(QStringLiteral(R"(\\end\s*\{frame\}\s*$)")));if(!inlineDependencies(inside,filename,depth))unsure();}
       deck.frames.append({filename,title,label,kind,rangeStart,rangeEnd,firstLine,lastLine,0,0,
         !inlineFrame&&!embeddedInput&&!conditionalDepth,hasLabel,opts.contains(QStringLiteral("allowframebreaks")),{},backup});
+      deck.frames.last().sliceable=!inlineFrame;
       deck.frames.last().section=section+(subsection.isEmpty()?QString():QStringLiteral(" / ")+subsection);
       deck.frames.last().titlePage=QRegularExpression(QStringLiteral(R"(\\(?:titlepage|maketitle)(?![A-Za-z@]))")).match(body).hasMatch();
     }
@@ -327,6 +341,7 @@ bool mapSlidePages(SlideDeck &deck,const QString &navigation,int pages,const QVe
 bool editSlide(TeXDocumentWindow *w,const SlideDeck &deck,int index,SlideEdit operation,QString *reason) {
   auto reject=[&](const QString &why){if(reason)*reason=why;return false;};
   if(!w)return false;
+  SlideSourceEdit sourceEdit(w);
   if(w->editor()->isReadOnly())return reject(QStringLiteral("源文件处于只读状态，不能执行整张编辑。"));
   if(operation==SlideEdit::Insert&&deck.frames.isEmpty()&&deck.beamer&&!deck.uncertain) {
     const auto file=path(w->fileName());const auto original=w->textDoc()->editorText();
@@ -376,7 +391,7 @@ bool editSlide(TeXDocumentWindow *w,const SlideDeck &deck,int index,SlideEdit op
 
 bool editSlideSelection(TeXDocumentWindow *w,const SlideDeck &deck,QVector<int> rows,SlideEdit operation,int before,QString *reason,bool apply) {
   auto reject=[&](const QString &text){if(reason)*reason=text;return false;};
-  if(!w||rows.isEmpty())return false;std::sort(rows.begin(),rows.end());rows.erase(std::unique(rows.begin(),rows.end()),rows.end());
+  if(!w||rows.isEmpty())return false;SlideSourceEdit sourceEdit(w);std::sort(rows.begin(),rows.end());rows.erase(std::unique(rows.begin(),rows.end()),rows.end());
   if(rows.first()<0||rows.last()>=deck.frames.size())return false;
   w->flushScriptEdits();const auto file=path(w->fileName());const auto original=w->textDoc()->editorText();
   if(w->editor()->isReadOnly()||original!=deck.sources.value(file))return reject(QStringLiteral("源码已变化或处于只读状态，请稍后重试。"));
@@ -880,7 +895,7 @@ public:
     for(auto &v:sourceViews)if(v.editor==w->editor())return v;
     SourceView v;v.editor=w->editor();v.doc=w->editor()->document();v.style=w->editor()->styleSheet();v.appliedStyle=v.style;sourceViews.append(v);w->editor()->installEventFilter(this);w->editor()->viewport()->installEventFilter(this);
     activeConnections.append(connect(w->editor(),&CompletingEdit::selectionChanged,this,[this,w]{
-      if(!enabled||changingSourceView)return;
+      if(!enabled||changingSourceView||w->editor()->property("researchSlideScopeTransaction").toBool())return;
       for(auto &v:sourceViews)if(v.editor==w->editor()&&v.partial) {
         const auto c=w->textCursor();if(c.hasSelection()&&(c.selectionStart()<v.first.position()||c.selectionEnd()>v.last.position())) {
           fullSourceSelected=true;showSource(w,0,0,true);updatePosition();
@@ -1274,6 +1289,7 @@ public:
   void insertLayout(const QString &content) {
     if(dirty||busy){showTransientStatusMessage(window,words(QStringLiteral("正在更新目录，请稍后重试"),QStringLiteral("Updating slides. Please try again shortly.")));return;}
     auto *target=selected>=0?sourceWindow(deck.frames[selected].file):window;if(!target||target->editor()->isReadOnly())return;
+    SlideSourceEdit sourceEdit(target);
     auto before=target->textDoc()->editorText();if(before!=deck.sources.value(path(target->fileName())))return;
     int at=selected>=0?deck.frames[selected].end:-1;
     if(selected>=0&&!deck.frames[selected].editable)return;
@@ -1407,9 +1423,9 @@ public:
       // Connections belong to this controller and are disconnected on exit.
       bool seen=false;for(const auto &v:watched)if(v==w){seen=true;break;}if(seen)continue;
       watched.append(w);
-      activeConnections.append(connect(w->textDoc(),&QTextDocument::contentsChange,this,[this,w](int,int removed,int added){if((removed||added)&&(w==window||deck.sources.contains(path(w->fileName()))))invalidate();}));
+      activeConnections.append(connect(w->textDoc(),&QTextDocument::contentsChange,this,[this,w](int,int removed,int added){if((removed||added)&&(w==window||deck.sources.contains(path(w->fileName()))||deck.dependencies.contains(path(w->fileName()))))invalidate();}));
       activeConnections.append(connect(w->editor(),&CompletingEdit::cursorPositionChanged,this,[this,w]{
-        if(!enabled||changingSourceView)return;
+        if(!enabled||changingSourceView||w->editor()->property("researchSlideScopeTransaction").toBool())return;
         if(!dirty&&!busy)cursor(w);
         else for(const auto &v:sourceViews)if(v.editor==w->editor()&&v.partial&&(w->cursorPosition()<v.first.position()||w->cursorPosition()>v.last.position())){showSource(w,0,0,true);break;}
       }));
@@ -1467,7 +1483,8 @@ public:
         bool same=true;for(auto it=result.sources.begin();it!=result.sources.end();++it)if(read(it.key())!=it.value()){same=false;break;}
         if(!pdf.isEmpty()) {
           const auto meta=pdfMetadata(pdf);const auto marker=QJsonDocument(meta).toJson(QJsonDocument::Compact);
-          result.dependencies=meta.value(QStringLiteral("inputs")).toObject().keys();result.dependencies.append(pdfMetadataReadFile(pdf));
+          const auto inputs=meta.value(QStringLiteral("inputs")).toObject();result.dependencies=inputs.keys();result.dependencies.append(pdfMetadataReadFile(pdf));
+          for(auto it=buffers.begin();it!=buffers.end();++it)if(inputs.contains(it.key())&&read(it.key())!=it.value()){same=false;break;}
           const auto nav=meta.value(QStringLiteral("beamerNavigation")).toString();
           result.previewCurrent=same&&certified(meta,pdf,source,cancelled)&&!cancelled();
           if(result.previewCurrent) {
@@ -1504,6 +1521,7 @@ public:
     if(window->editor()->hasFocus()&&!preservePreamble&&!fullSourceSelected)for(const auto &v:sourceViews)
       if(v.editor==window->editor()&&v.partial){sourceAnchor=v.first.position();break;}
     const int scroll=pendingScroll>=0?pendingScroll:list->verticalScrollBar()->value();const bool restoreScroll=pendingScroll>=0||!initial;pendingScroll=-1;
+    const int oldPage=int(preview->currentPage());
     const qreal oldZoom=preview->zoomLevel();QPointF readingPoint;bool hasReadingPoint=false;
     if(previewScene)if(auto *page=previewScene->pageAt(preview->currentPage())){readingPoint=page->mapFromScene(preview->mapToScene(preview->viewport()->rect().center()));hasReadingPoint=true;}
     const auto oldRevision=deck.revision;
@@ -1563,7 +1581,13 @@ public:
     if(notesNavigate){notesNavigate=false;select(selected,true);}
     if(window->property("researchRestoreSlidePlace").isValid())QTimer::singleShot(0,this,[this]{const auto state=window->property("researchRestoreSlidePlace").toMap();window->setProperty("researchRestoreSlidePlace",QVariant());if(!state.isEmpty())restoreSlideReadingState(window,state);});
     updateStatus();attachPdf();if(overviewAfterNotes){overviewAfterNotes=false;showOverview();}if(initial)cursor(window);else if(preservePreamble){inPreamble=true;list->clearSelection();if(auto *w=sourceWindow(documentFile))showSource(w,0,deck.preambleEnd.value(documentFile,w->editor()->document()->characterCount()-1));updatePosition();}
-    if(deck.mapped){showPage();if(newPreview){if(hasReadingPoint){preview->setZoomLevel(oldZoom);preview->goToPage(deck.frames[selected].firstPage+selectedStep-2,readingPoint);}else fitPreview();}}
+    if(deck.mapped)showPage();
+    if(newPreview){
+      const int physical=deck.mapped&&selected>=0?deck.frames[selected].firstPage+selectedStep-2:qBound(0,oldPage,int(document->numPages())-1);
+      if(hasReadingPoint){preview->setZoomLevel(oldZoom);preview->goToPage(physical,readingPoint);}
+      else{preview->goToPage(physical,Qt::AlignCenter);fitPreview();}
+    }
+    updatePosition();
     if(deck.mapped&&!compiling&&!failed) {
       const bool announce=notifyUpdate&&newPreview;notifyUpdate=false;
       if(announce)showTransientStatusMessage(window,words(QStringLiteral("已更新"),QStringLiteral("Updated")));
@@ -1573,11 +1597,17 @@ public:
     for(const auto &entry:QList<QPair<QString,bool>>{{QStringLiteral("researchSourcePreamble"),inPreamble},{QStringLiteral("researchSourceFull"),fullSourceSelected}})
       if(auto *button=window->findChild<QToolButton *>(entry.first);button&&button->property("researchActiveScope").toBool()!=entry.second){button->setProperty("researchActiveScope",entry.second);button->style()->unpolish(button);button->style()->polish(button);button->update();}
     if(fullSourceButton){fullSourceButton->setText(fullSourceSelected?words(QStringLiteral("返回单页"),QStringLiteral("Back to slide")):words(QStringLiteral("全文"),QStringLiteral("Full source")));configureButton(fullSourceButton,ButtonRole::Text);fullSourceButton->setToolTip(fullSourceSelected?words(QStringLiteral("恢复只编辑当前幻灯片"),QStringLiteral("Edit only the current slide")):words(QStringLiteral("编辑当前文件全部源码；点击幻灯片只定位；Ctrl+End 前往文末"),QStringLiteral("Edit the full current file; slide navigation keeps it visible. Ctrl+End goes to the end.")));}
+    if(selected>=0&&selected<deck.frames.size()){const auto &f=deck.frames[selected];position->setToolTip(slideCaption(f)+QLatin1Char('\n')+QDir(QFileInfo(root).absolutePath()).relativeFilePath(f.file));}
+    else position->setToolTip(status->toolTip());
+    if(!deck.mapped){
+      QString title=inPreamble?words(QStringLiteral("导言"),QStringLiteral("Preamble")):fullSourceSelected?words(QStringLiteral("完整源码"),QStringLiteral("Complete source")):selected>=0&&selected<deck.frames.size()?words(QStringLiteral("源码第 %1 / %2 张"),QStringLiteral("Source slide %1 / %2")).arg(selected+1).arg(deck.frames.size()):words(QStringLiteral("源码"),QStringLiteral("Source"));
+      if(previewScene)if(auto document=preview->document().toStrongRef())title+=words(QStringLiteral(" · PDF 第 %1 / %2 页"),QStringLiteral(" · PDF page %1 / %2")).arg(preview->currentPage()+1).arg(document->numPages());
+      position->setText(title);position->setAccessibleName(title);return;
+    }
     if(selected<0||selected>=deck.frames.size())return;
     const auto &f=deck.frames[selected];const int count=f.firstPage?f.lastPage-f.firstPage+1:0;
     const auto title=words(QStringLiteral("第 %1 / %2 张"),QStringLiteral("Slide %1 / %2")).arg(selected+1).arg(deck.frames.size());
     position->setText(title);
-    position->setToolTip(slideCaption(f)+QLatin1Char('\n')+QDir(QFileInfo(root).absolutePath()).relativeFilePath(f.file));
     position->setAccessibleName(title+(count>1?words(f.breaks?QStringLiteral(" · 第 %1 / %2 页"):QStringLiteral(" · 第 %1 / %2 步"),f.breaks?QStringLiteral(" · page %1 / %2"):QStringLiteral(" · step %1 / %2")).arg(selectedStep).arg(count):QString()));
     if(inPreamble)position->setText(words(QStringLiteral("导言 · 预览第 %1 张"),QStringLiteral("Preamble · preview slide %1")).arg(selected+1));
     if(fullSourceSelected)position->setText(words(QStringLiteral("完整源码 · 预览第 %1 张"),QStringLiteral("Complete source · preview slide %1")).arg(selected+1));
@@ -1598,7 +1628,8 @@ public:
     const auto f=deck.frames[row];const int count=f.firstPage?f.lastPage-f.firstPage+1:0;
     auto *target=sourceWindow(f.file);
     if(!target&&navigationReady){target=TeXDocumentWindow::openDocument(f.file,false,false);if(target){target->setGeometry(window->geometry());if(window->isMaximized())target->showMaximized();}}
-    if(reveal&&target&&!fullSourceSelected&&!expandedPreview)showSource(target,f.start,f.end,!f.editable);
+    SlideSourceEdit sourceNavigation(target);
+    if(reveal&&target&&!fullSourceSelected&&!expandedPreview)showSource(target,f.start,f.end,!f.sliceable);
     {QSignalBlocker b(step);step->setRange(1,qMax(1,count));selectedStep=qBound(1,selectedStep,qMax(1,count));step->setValue(selectedStep);step->setSuffix(count?QStringLiteral(" / %1").arg(count):QString());step->setEnabled(count>0);}
     previousStep->setEnabled(count>0&&selectedStep>1);nextStep->setEnabled(count>0&&selectedStep<count);
     previousStep->setToolTip(words(f.breaks?QStringLiteral("上一页"):QStringLiteral("上一步"),f.breaks?QStringLiteral("Previous page"):QStringLiteral("Previous step")));nextStep->setToolTip(words(f.breaks?QStringLiteral("下一页"):QStringLiteral("下一步"),f.breaks?QStringLiteral("Next page"):QStringLiteral("Next step")));previousStep->setAccessibleName(previousStep->toolTip());nextStep->setAccessibleName(nextStep->toolTip());
@@ -1642,7 +1673,9 @@ public:
     }
   }
   void pageChanged(int page) {
-    if(!enabled||dirty||!deck.mapped||applying||compiling)return;
+    if(!enabled)return;
+    if(!deck.mapped){updatePosition();return;}
+    if(dirty||applying||compiling)return;
     const int physical=page+1;
     QScopedValueRollback<bool> updating(applying,true);
     for(int i=0;i<deck.frames.size();++i){const auto &f=deck.frames[i];if(physical>=f.firstPage&&physical<=f.lastPage){
@@ -1736,7 +1769,7 @@ void restoreSlideReadingState(TeXDocumentWindow *w,const QVariantMap &state){
    {QSignalBlocker block(c->list);c->list->setCurrentRow(selected);}c->select(selected,false,false);c->showPage();
  }
  c->fullSourceSelected=full||(!preamble&&selected<0);c->inPreamble=preamble;
- if(c->fullSourceSelected)c->showSource(w,0,0,true);else if(preamble)c->showSource(w,0,c->deck.preambleEnd.value(path(w->fileName())));else if(selected>=0&&selected<c->deck.frames.size()){const auto &f=c->deck.frames[selected];c->showSource(w,f.start,f.end);}
+ if(c->fullSourceSelected)c->showSource(w,0,0,true);else if(preamble)c->showSource(w,0,c->deck.preambleEnd.value(path(w->fileName())));else if(selected>=0&&selected<c->deck.frames.size()){const auto &f=c->deck.frames[selected];c->showSource(w,f.start,f.end,!f.sliceable);}
  c->updatePosition();if(state.contains(QStringLiteral("scroll")))w->editor()->verticalScrollBar()->setValue(state.value(QStringLiteral("scroll")).toInt());
 }
 void installSlideMode(TeXDocumentWindow *w) {

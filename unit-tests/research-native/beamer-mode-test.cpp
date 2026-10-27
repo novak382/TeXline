@@ -164,8 +164,10 @@ int main(int argc,char **argv) {
     mode->setChecked(false);const int parseCount=w->property("researchSlideParses").toInt();w->editor()->insertPlainText("x");w->editor()->undo();settle(700);
     check("exit releases preview and stops parsing while preserving source",!w->property("researchSlideMode").toBool()&&w->property("researchSlideParses").toInt()==parseCount&&w->textDoc()->editorText()==before);
     check("exit restores all source blocks",visible().contains("\\documentclass")&&visible().contains("Untitled body."));
-    // Malformed, macro-generated and conditional structures cannot claim a map.
-    for(const QByteArray &body:{QByteArray("\\newcommand{\\makeframe}{\\begin{frame}X\\end{frame}}\n\\makeframe\n"),QByteArray("\\iftrue\n\\begin{frame}X\\end{frame}\n\\fi\n"),QByteArray("\\begin{frame}\nUnclosed.\n")}) {
+    const QString wrapperFile=folder+"/wrapper/main.tex";put(wrapperFile,"\\documentclass{beamer}\n\\begin{document}\n\\newcommand{\\makeframe}{\\begin{frame}X\\end{frame}}\n\\makeframe\n\\end{document}\n");const auto wrapper=Research::parseSlideDeck(wrapperFile);
+    check("bounded zero-argument wrapper is one read-only source slice",!wrapper.uncertain&&wrapper.frames.size()==1&&wrapper.frames[0].sliceable&&!wrapper.frames[0].editable);
+    // Parameterized, conditional and malformed structures still cannot claim a map.
+    for(const QByteArray &body:{QByteArray("\\newcommand{\\makeframe}[1]{\\begin{frame}#1\\end{frame}}\n\\makeframe{X}\n"),QByteArray("\\iftrue\n\\begin{frame}X\\end{frame}\n\\fi\n"),QByteArray("\\begin{frame}\nUnclosed.\n")}) {
       const QString file=folder+"/unsupported/main.tex";put(file,"\\documentclass{beamer}\n\\begin{document}\n"+body+"\\end{document}\n");check("dynamic or malformed source explicitly downgrades",Research::parseSlideDeck(file).uncertain);
     }
     auto cancelled=Research::parseSlideDeck(root,{},[]{return true;});check("worker parser honours cancellation",cancelled.cancelled);

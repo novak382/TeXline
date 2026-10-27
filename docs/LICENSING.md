@@ -40,7 +40,7 @@ are still supplied for inspection and further rebuilding.
 - Resolve any uncovered corresponding-source or dependency-build issue before
   describing the package as ready for unrestricted public distribution.
 
-The [public release](https://github.com/novak382/TeXline/releases/tag/v1.0.0)
+The [public release](https://github.com/novak382/TeXline/releases/tag/v1.0.0-20261028)
 keeps these materials together. The release report records actual checks and
 remaining gaps; it is not a blanket legal certification.
 
