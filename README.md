@@ -4,7 +4,7 @@
 
 <p align="center">A free, local editor for notes, papers and Beamer talks.<br>Windows 10/11 x64<br>English · 简体中文 · 繁體中文</p>
 
-<p align="center"><a href="https://texline.dev/#download"><strong>Download</strong></a> &nbsp; · &nbsp; <a href="https://texline.dev/">Website</a> &nbsp; · &nbsp; <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><a href="https://github.com/novak382/TeXline/releases/tag/v1.0.0-20261028"><strong>Download</strong></a> &nbsp; · &nbsp; <a href="https://texline.dev/">Website</a> &nbsp; · &nbsp; <a href="README.zh-CN.md">简体中文</a></p>
 
 [![An archaeology note and its compiled page in TeXline, with a photograph of an Attic amphora.](docs/media/showcase/archaeology.png)](https://texline.dev/)
 
@@ -53,7 +53,7 @@ Menus start with the essentials and can be customized in settings. [Find each fe
 ## Start with one file
 
 1. Install [TeX Live](https://tug.org/texlive/) or [MiKTeX](https://miktex.org/). TeXline uses your local engines and packages.
-2. Get the [Windows installer](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Setup-x64.exe) or [portable ZIP](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Portable-x64.zip), then open `TeXline.exe`.
+2. Get the [Windows installer](https://github.com/novak382/TeXline/releases/download/v1.0.0-20261028/TeXline-1.0.0-Setup-x64.exe) or [portable ZIP](https://github.com/novak382/TeXline/releases/download/v1.0.0-20261028/TeXline-1.0.0-Portable-x64.zip), then open `TeXline.exe`.
 3. Open a file or start from a template. Choose **Compile** to see the PDF.
 
 The installer works per user and leaves file associations unchanged. The Windows package is currently unsigned. Git features require a separate Git installation.

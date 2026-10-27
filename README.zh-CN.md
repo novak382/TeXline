@@ -4,7 +4,7 @@
 
 <p align="center">免费的本地编辑器，用于笔记、文章和 Beamer 讲稿。<br>Windows 10/11 x64<br>English · 简体中文 · 繁體中文</p>
 
-<p align="center"><a href="https://texline.dev/#download"><strong>下载 Windows 版</strong></a> &nbsp; · &nbsp; <a href="https://texline.dev/">官网与演示</a> &nbsp; · &nbsp; <a href="README.md">English</a></p>
+<p align="center"><a href="https://github.com/novak382/TeXline/releases/tag/v1.0.0-20261028"><strong>下载 Windows 版</strong></a> &nbsp; · &nbsp; <a href="https://texline.dev/">官网与演示</a> &nbsp; · &nbsp; <a href="README.md">English</a></p>
 
 [![TeXline 中的考古笔记与编译后的页面，配有古希腊双耳陶罐图片。](docs/media/showcase/archaeology.png)](https://texline.dev/)
 
@@ -53,7 +53,7 @@ TeXline 让正文成为界面的中心，文件仍是普通 LaTeX。使用本地
 ## 从一个文件开始
 
 1. 安装 [TeX Live](https://tug.org/texlive/) 或 [MiKTeX](https://miktex.org/)，提供编译引擎与宏包。
-2. 下载 [Windows 安装包](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Setup-x64.exe) 或[便携 ZIP](https://texline.dev/downloads/v1.0.0-20261028/TeXline-1.0.0-Portable-x64.zip)，打开 `TeXline.exe`。
+2. 下载 [Windows 安装包](https://github.com/novak382/TeXline/releases/download/v1.0.0-20261028/TeXline-1.0.0-Setup-x64.exe) 或[便携 ZIP](https://github.com/novak382/TeXline/releases/download/v1.0.0-20261028/TeXline-1.0.0-Portable-x64.zip)，打开 `TeXline.exe`。
 3. 打开文件，或从模板开始。选择“编译”即可查看 PDF。
 
 安装包按当前用户安装，不改变文件关联，目前尚未签名。Git 功能需要另外安装 Git。
